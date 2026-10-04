@@ -9,7 +9,8 @@ for(const lang of ['ar','en']){const dir=path.join(root,lang);if(!fs.existsSync(
 // Security helpers: CAPTCHA verification + bounded attack/event recorder.
 if(!app.includes('RASSMIY_SECURITY_V61')){
  const anchor='function adminContent(state,session,url){';
- // Anchor may differ between CMS builds; appending top-level helpers is valid ESM.\n const hasAnchor=app.includes(anchor);
+ // Anchor may differ between CMS builds; appending top-level helpers is valid ESM.
+ const hasAnchor=app.includes(anchor);
  const helper=`// RASSMIY_SECURITY_V61
 const SECURITY_MAX_EVENTS=500;
 function securityIp(req){return String(req.headers.get('x-nf-client-connection-ip')||req.headers.get('x-forwarded-for')||'unknown').split(',')[0].trim().slice(0,80)}
