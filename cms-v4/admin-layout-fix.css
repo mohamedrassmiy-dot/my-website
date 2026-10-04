@@ -1,0 +1,101 @@
+
+/* Admin RTL layout hotfix v4.2.2
+   Keep shell geometry LTR so grid tracks don't swap under html[dir=rtl].
+   Keep actual UI text/content RTL inside both columns. */
+.cms-shell{
+  direction:ltr;
+  grid-template-columns:274px minmax(0,1fr)!important;
+  width:100%;
+}
+.cms-side{
+  grid-column:1!important;
+  direction:rtl;
+  width:274px;
+  max-width:274px;
+  min-width:274px;
+}
+.cms-workspace{
+  grid-column:2!important;
+  direction:rtl;
+  width:100%;
+  min-width:0;
+  overflow:hidden;
+}
+.cms-topbar,
+.cms-main{
+  width:100%;
+  min-width:0;
+}
+.cms-topbar{
+  padding-inline:24px;
+}
+.top-search{
+  min-width:220px;
+}
+.table-wrap{
+  width:100%;
+  max-width:100%;
+  overflow:auto;
+}
+.table-panel{
+  width:100%;
+  min-width:0;
+}
+.filterbar{
+  width:100%;
+}
+.filter-search{
+  min-width:220px;
+}
+@media (max-width:1200px) and (min-width:901px){
+  .cms-shell{
+    grid-template-columns:238px minmax(0,1fr)!important;
+  }
+  .cms-side{
+    width:238px;
+    min-width:238px;
+    max-width:238px;
+  }
+  .cms-main{padding:24px}
+  .cms-topbar{padding-inline:20px}
+}
+@media (max-width:900px){
+  .cms-shell{
+    display:block!important;
+    direction:ltr;
+  }
+  .cms-side{
+    grid-column:auto!important;
+    width:min(86vw,300px)!important;
+    min-width:0;
+    max-width:300px;
+    direction:rtl;
+    left:0!important;
+    right:auto!important;
+    transform:translateX(-105%)!important;
+  }
+  .cms-side.open{
+    transform:translateX(0)!important;
+  }
+  [dir="rtl"] .cms-side{
+    left:0!important;
+    right:auto!important;
+    transform:translateX(-105%)!important;
+  }
+  [dir="rtl"] .cms-side.open{
+    transform:translateX(0)!important;
+  }
+  .cms-workspace{
+    grid-column:auto!important;
+    width:100%;
+    direction:rtl;
+  }
+  .cms-main{padding:20px 16px}
+}
+@media (max-width:600px){
+  .cms-main{padding:14px 12px}
+  .page-head{gap:12px;margin-bottom:18px}
+  .page-head h1{font-size:24px}
+  .filter-search{min-width:0}
+  table{min-width:720px}
+}
