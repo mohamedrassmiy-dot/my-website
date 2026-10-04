@@ -7,7 +7,7 @@ const stylesPath = path.join(root,'assets','styles.css');
 const jsPath = path.join(root,'assets','site.js');
 
 const mobileCss = String.raw`
-/* Rassmiy public responsive navigation v4.7 */
+/* Rassmiy public responsive navigation v4.9 */
 html,body{max-width:100%;overflow-x:clip}
 body{min-width:0}
 .container{max-width:1180px}
@@ -26,12 +26,12 @@ body{min-width:0}
   .nav-actions .desktop-action,.nav-actions>a.btn{display:none!important}
   .nav-actions>.lang{display:inline-flex;min-width:48px;height:46px;align-items:center;justify-content:center;padding:0 12px}
   .mobile-toggle{display:inline-flex!important}
-  .mobile-nav-backdrop{position:fixed;inset:72px 0 0;background:rgba(3,20,42,.48);backdrop-filter:blur(3px);z-index:998}
+  .mobile-nav-backdrop{position:fixed;inset:72px 0 0;background:rgba(3,20,42,.58);z-index:1998}
   .mobile-nav-backdrop.open{display:block}
-  .mobile-nav-panel{position:fixed;top:72px;inset-inline:0;bottom:0;background:#fff;z-index:999;padding:18px 18px max(24px,env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch}
+  .mobile-nav-panel{position:fixed;top:72px;left:0;right:0;bottom:0;width:100%;height:calc(100dvh - 72px);background:#fff;z-index:1999;padding:16px 16px max(28px,env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;box-sizing:border-box}
   .mobile-nav-panel.open{display:block}
-  .mobile-nav-panel nav{display:grid;gap:6px;max-width:720px;margin-inline:auto}
-  .mobile-nav-panel nav a{display:flex;align-items:center;min-height:52px;padding:13px 16px;border-radius:14px;color:#082b55;font-weight:800;font-size:16px;border:1px solid transparent}
+  .mobile-nav-panel nav{display:grid;gap:8px;max-width:720px;margin:0 auto;padding:0}
+  .mobile-nav-panel nav a{display:flex!important;visibility:visible!important;opacity:1!important;align-items:center;min-height:52px;padding:13px 16px;border-radius:14px;color:#082b55!important;background:#fff;font-weight:800;font-size:16px;border:1px solid #e7edf4;text-decoration:none}
   .mobile-nav-panel nav a:hover,.mobile-nav-panel nav a.active{background:#f0f6fb;color:#ff7a19;border-color:#e2edf7}
   .mobile-nav-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:720px;margin:18px auto 0;padding-top:18px;border-top:1px solid #e4ebf3}
   .mobile-nav-actions .btn{display:flex!important;width:100%;justify-content:center;min-height:50px;margin:0}
@@ -61,7 +61,7 @@ body{min-width:0}
 @media(max-width:620px){
   .container{width:calc(100% - 22px)}
   .nav{height:68px;gap:7px}
-  .mobile-nav-panel{top:68px;padding-inline:14px}
+  .mobile-nav-panel{top:68px;height:calc(100dvh - 68px);padding-inline:14px}
   .mobile-nav-backdrop{inset:68px 0 0}
   .brand img{width:44px;height:44px;flex-basis:44px;border-radius:12px}
   .brand-copy{display:none!important}
@@ -96,7 +96,7 @@ body{min-width:0}
 `;
 let styles = fs.readFileSync(stylesPath,'utf8');
 styles = styles.replace(/\/\* Rassmiy public mobile navigation v4\.6 \*\/[\s\S]*?(?=\/\* Rassmiy public responsive navigation v4\.7 \*\/|$)/,'');
-if(!styles.includes('Rassmiy public responsive navigation v4.7')) styles += '\n'+mobileCss+'\n';
+if(!styles.includes('Rassmiy public responsive navigation v4.9')) styles += '\n'+mobileCss+'\n';
 fs.writeFileSync(stylesPath,styles);
 
 const js = String.raw`(()=>{
@@ -123,12 +123,19 @@ const js = String.raw`(()=>{
         panel.setAttribute('data-public-menu','');
         const n=document.createElement('nav');
         desktopMenu?.querySelectorAll('a').forEach(a=>n.appendChild(a.cloneNode(true)));
+        if(n.querySelectorAll('a').length < 4){
+          const ar=document.documentElement.lang==='ar';
+          const links=ar
+            ? [['الرئيسية','/ar/index.html'],['من أنا','/ar/about.html'],['الخدمات','/ar/services.html'],['الأعمال','/ar/portfolio.html'],['المقالات','/ar/articles'],['تواصل معي','/ar/contact.html']]
+            : [['Home','/en/index.html'],['About','/en/about.html'],['Services','/en/services.html'],['Portfolio','/en/portfolio.html'],['Articles','/en/articles'],['Contact','/en/contact.html']];
+          n.replaceChildren(...links.map(([label,href])=>{const a=document.createElement('a');a.href=href;a.textContent=label;return a;}));
+        }
         panel.appendChild(n);
         const ma=document.createElement('div');
         ma.className='mobile-nav-actions';
         actions.querySelectorAll('a.btn').forEach(a=>{const c=a.cloneNode(true);c.classList.remove('desktop-action');ma.appendChild(c)});
         panel.appendChild(ma);
-        nav.appendChild(panel);
+        document.body.appendChild(panel);
       }
       if(!panel.id) panel.id='mobile-nav-'+index;
       toggle.setAttribute('aria-controls',panel.id);
