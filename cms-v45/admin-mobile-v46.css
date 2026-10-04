@@ -1,0 +1,23 @@
+/* Rassmiy CMS mobile UX v4.6 */
+@media(max-width:900px){
+  .cms-topbar{height:64px;min-height:64px;padding:0 14px!important;display:flex!important;gap:10px!important;align-items:center!important;position:sticky;top:0;z-index:80;background:#fff}
+  .topbar-start{display:flex;align-items:center;gap:10px;min-width:0;flex:1}
+  .mobile-menu{display:inline-flex!important;width:42px;height:42px;align-items:center;justify-content:center;border-radius:12px;font-size:20px;flex:0 0 auto}
+  .page-context{min-width:0}.page-context small{display:none}.page-context b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px}
+  .top-search{display:none!important}.top-user{display:none!important}.role-pill{display:none!important}
+  .ui-lang-switch{margin-inline-start:auto;flex:0 0 auto}
+  .cms-side{position:fixed!important;top:0!important;bottom:0!important;height:100dvh!important;z-index:120!important;overflow:auto!important;box-shadow:0 24px 60px rgba(0,0,0,.28)}
+  html[dir="rtl"] .cms-side,.cms-shell.ui-ar .cms-side{right:0!important;left:auto!important;transform:translateX(105%)!important}
+  html[dir="rtl"] .cms-side.open,.cms-shell.ui-ar .cms-side.open{transform:translateX(0)!important}
+  html[dir="ltr"] .cms-side,.cms-shell.ui-en .cms-side{left:0!important;right:auto!important;transform:translateX(-105%)!important}
+  html[dir="ltr"] .cms-side.open,.cms-shell.ui-en .cms-side.open{transform:translateX(0)!important}
+  .sidebar-backdrop.open{display:block!important;position:fixed;inset:0;background:rgba(4,27,55,.5);z-index:110;backdrop-filter:blur(2px)}
+  .cms-main{padding:18px 14px 32px!important}.page-head{display:block!important}.page-head>div:last-child{margin-top:12px;display:flex;gap:8px;flex-wrap:wrap}
+  .metric-grid{grid-template-columns:1fr 1fr!important;gap:10px!important}.metric{padding:14px!important}.metric b{font-size:25px!important}
+  .two-panels,.dashboard-primary,.editor-grid,.form-grid.two{grid-template-columns:1fr!important}
+  .panel,.side-card{border-radius:18px!important}.table-wrap{overflow:auto;-webkit-overflow-scrolling:touch}.table-wrap table{min-width:760px}
+  .editor-tabs{overflow:auto;white-space:nowrap;-webkit-overflow-scrolling:touch}.editor-tabs button{flex:0 0 auto}
+}
+@media(max-width:560px){
+  .metric-grid{grid-template-columns:1fr!important}.cms-main{padding-inline:10px!important}.page-head h1{font-size:27px!important}.panel{padding:16px!important}.side-card{padding:15px!important}
+}
