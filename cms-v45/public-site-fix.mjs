@@ -185,7 +185,7 @@ function injectSeo(file,lang,name){
   html=html.replace(/<link\s+rel=["']alternate["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+property=["']og:url["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+property=["']og:locale(?::alternate)?["'][^>]*>/gi,'');
-  html=html.replace(/<meta\s+name=[#']robots["'][^>]*>/gi,'');
+  html=html.replace(/<meta\s+name=["']robots["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+name=[#']googlebot["'][^>]*>/gi,'');
   const robots=isPrivate?'noindex,nofollow':'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
   const tags=`\n<meta name="robots" content="${robots}">\n<meta name="googlebot" content="${robots}">\n<link rel="canonical" href="${canonical}">\n<link rel="alternate" hreflang="${lang}" href="${altSame}">\n<link rel="alternate" hreflang="${counterpartLang}" href="${altOther}">\n<link rel="alternate" hreflang="x-default" href="${xDefault}">\n<meta property="og:url" content="${canonical}">\n<meta property="og:locale" content="${lang==='ar'?'ar_SA':'en_US'}">\n<meta property="og:locale:alternate" content="${lang==='ar'?'en_US':'ar_SA'}">\n`;
