@@ -6,4 +6,4 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# Fix persistent CMS state across deploys
+# Production trigger: persistent CMS state fix
