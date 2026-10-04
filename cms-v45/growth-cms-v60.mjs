@@ -156,12 +156,14 @@ const pagesJson=JSON.stringify(PAGES);
 const articlesJson=JSON.stringify(ARTICLES);
 
 if(!app.includes('const RASSMIY_DEFAULT_CARDS_V60=')){
-  app=app.replace('function adminContent(state,session,url){',
-`const RASSMIY_DEFAULT_CARDS_V60=${cardsJson};
-const RASSMIY_SEED_PAGES_V60=${pagesJson};
-const RASSMIY_SEED_ARTICLES_V60=${articlesJson};
+  const adminAnchor=app.includes("function adminContent(state,session,url,ui='ar'){")
+    ? "function adminContent(state,session,url,ui='ar'){"
+    : (app.includes('function adminContent(state,session,url){') ? 'function adminContent(state,session,url){' : '');
+  if(!adminAnchor) throw new Error('growth v6.2 adminContent anchor missing');
+  const injected=`const RASSMIY_DEFAULT_CARDS_V60=${cardsJson};
 function rassmiyCards(state){ try{ const raw=String(state.settings?.cards_json||'').trim(); if(!raw)return RASSMIY_DEFAULT_CARDS_V60; const x=JSON.parse(raw); return Array.isArray(x)?x:RASSMIY_DEFAULT_CARDS_V60; }catch{return RASSMIY_DEFAULT_CARDS_V60;} }
-function adminContent(state,session,url){`);
+${adminAnchor}`;
+  app=app.replace(adminAnchor,injected);
 }
 
 if(!app.includes("action==='save_cards'")){
