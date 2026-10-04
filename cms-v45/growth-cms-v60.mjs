@@ -156,23 +156,14 @@ const pagesJson=JSON.stringify(PAGES);
 const articlesJson=JSON.stringify(ARTICLES);
 
 if(!app.includes('const RASSMIY_DEFAULT_CARDS_V60=')){
-  app=app.replace('function adminContent(state,session,url){',
-`const RASSMIY_DEFAULT_CARDS_V60=${cardsJson};
-const RASSMIY_SEED_PAGES_V60=${pagesJson};
-const RASSMIY_SEED_ARTICLES_V60=${articlesJson};
+  const adminAnchor=app.includes("function adminContent(state,session,url,ui='ar'){")
+    ? "function adminContent(state,session,url,ui='ar'){"
+    : (app.includes('function adminContent(state,session,url){') ? 'function adminContent(state,session,url){' : '');
+  if(!adminAnchor) throw new Error('growth v6.2 adminContent anchor missing');
+  const injected=`const RASSMIY_DEFAULT_CARDS_V60=${cardsJson};
 function rassmiyCards(state){ try{ const raw=String(state.settings?.cards_json||'').trim(); if(!raw)return RASSMIY_DEFAULT_CARDS_V60; const x=JSON.parse(raw); return Array.isArray(x)?x:RASSMIY_DEFAULT_CARDS_V60; }catch{return RASSMIY_DEFAULT_CARDS_V60;} }
-function adminContent(state,session,url){`);
-}
-
-const settingsLine='  state.settings = { ...DEFAULT_SETTINGS, ...(state.settings || {}) };\n';
-if(app.includes(settingsLine)&&!app.includes('RASSMIY_SEED_MIGRATION_V60')){
-  app=app.replace(settingsLine,settingsLine+`  // RASSMIY_SEED_MIGRATION_V60
-  state.pages=Array.isArray(state.pages)?state.pages:[];
-  state.articles=Array.isArray(state.articles)?state.articles:[];
-  if(!String(state.settings.cards_json||'').trim()){state.settings.cards_json=JSON.stringify(RASSMIY_DEFAULT_CARDS_V60);dirty=true;}
-  for(const row of RASSMIY_SEED_PAGES_V60){if(!state.pages.some(x=>x.id===row.id||x.slug_en===row.slug_en)){state.pages.push({...row});dirty=true;}}
-  for(const row of RASSMIY_SEED_ARTICLES_V60){if(!state.articles.some(x=>x.id===row.id||x.slug_en===row.slug_en)){state.articles.push({...row});dirty=true;}}
-`);
+${adminAnchor}`;
+  app=app.replace(adminAnchor,injected);
 }
 
 if(!app.includes("action==='save_cards'")){
@@ -187,19 +178,14 @@ if(!app.includes("save_cards:'settings'")){
   app=app.replace("save_site_settings:'settings',","save_site_settings:'settings',save_cards:'settings',");
 }
 
-if(!app.includes("path==='/api/cards'")){
+if(!app.includes("path==='/api/content-cards'")){
   const anchor="  if(path==='/api/health')";
   if(!app.includes(anchor)) throw new Error('api health anchor missing');
-  app=app.replace(anchor,`  if(path==='/api/cards' && req.method==='GET'){ try{ const payload={cards:[...rassmiyCards(state)].sort((a,b)=>Number(a.order||0)-Number(b.order||0))}; return text(JSON.stringify(payload),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'}); }catch(e){ return text(JSON.stringify({cards:RASSMIY_DEFAULT_CARDS_V60,error:'fallback'}),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'}); } }
+  app=app.replace(anchor,`  if(path==='/api/content-cards' && req.method==='GET'){ let cards=[]; try{ cards=typeof rassmiyCards==='function'?[...rassmiyCards(state)]:[]; }catch{} if(!cards.length&&typeof RASSMIY_DEFAULT_CARDS_V60!=='undefined')cards=[...RASSMIY_DEFAULT_CARDS_V60]; cards.sort((a,b)=>Number(a.order||0)-Number(b.order||0)); return new Response(JSON.stringify({cards}),{status:200,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Robots-Tag':'noindex'}}); }
 `+anchor);
 }
 
 
-if(app.includes("const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const homeAlts=")){
- app=app.replace("const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const homeAlts=",
- "const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const growthStatic=[...RASSMIY_SEED_PAGES_V60.flatMap(p=>['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/pages/'+encodeURIComponent(lang==='ar'?p.slug_ar:p.slug_en)}))),...['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/articles'})),...RASSMIY_SEED_ARTICLES_V60.flatMap(a=>['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/articles/'+encodeURIComponent(lang==='ar'?a.slug_ar:a.slug_en)})))]; for(const x of growthStatic)add(x.href,'','0.8','weekly',[]); const homeAlts=");
-}
-// GROWTH_SITEMAP_V61
 
 fs.writeFileSync(appFile,app);
 
@@ -277,7 +263,7 @@ js+=`
  const renderCase=(c)=>'<article class="case-card is-clickable-card" data-card-key="'+esc(c.id)+'" data-card-link="'+esc(field(c,'cta_url'))+'">'+(c.image?'<img class="editable-card-media" src="'+esc(c.image)+'" alt="'+esc(field(c,'alt')||field(c,'title'))+'">':'')+(field(c,'eyebrow')?'<div class="card-eyebrow">'+esc(field(c,'eyebrow'))+'</div>':'')+'<h3>'+esc(field(c,'title'))+'</h3><p>'+esc(field(c,'description'))+'</p>'+(field(c,'metric')?'<div class="card-metric">'+esc(field(c,'metric'))+'</div>':'')+(field(c,'cta_label')?'<a class="case-link" href="'+esc(field(c,'cta_url')||'#')+'">'+esc(field(c,'cta_label'))+'</a>':'')+'</article>';
  async function hydrate(){
   try{
-   const r=await fetch('/api/cards',{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)return;
+   const r=await fetch('/api/content-cards',{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)return;
    const data=await r.json(),cards=(data.cards||[]).filter(c=>c.enabled!==false).sort((a,b)=>(a.order||0)-(b.order||0));
    for(const collection of ['service','portfolio']){
     const selector=collection==='service'?'.service-card':'.case-card';
@@ -351,7 +337,7 @@ adminJs+=`
   const L=labels();const section=document.createElement('section');section.className='panel card-manager';section.id='card-manager';
   section.innerHTML='<div class="panel-head"><div><h2>'+L.title+'</h2><p>'+L.sub+'</p></div></div><div class="card-manager-toolbar"><button type="button" class="secondary-btn" data-add-card>'+L.add+'</button><button type="button" class="primary-btn" data-save-cards>'+L.save+'</button></div><div class="card-editor-list"></div><p class="card-manager-status"></p>';
   main.appendChild(section);
-  try{const r=await fetch('/api/cards',{cache:'no-store'});const d=await r.json();cards=Array.isArray(d.cards)?d.cards:[];}catch{cards=[];}
+  try{const r=await fetch('/api/content-cards',{cache:'no-store'});const d=await r.json();cards=Array.isArray(d.cards)?d.cards:[];}catch{cards=[];}
   render();
   section.addEventListener('input',e=>{if(e.target.matches('[data-f]'))syncFromDom()});
   section.addEventListener('click',e=>{
@@ -416,5 +402,8 @@ for(const p of PAGES)for(const lang of ['ar','en'])growthUrls.push(siteBase+'/'+
 growthUrls.push(siteBase+'/ar/articles',siteBase+'/en/articles');
 for(const a of ARTICLES)for(const lang of ['ar','en'])growthUrls.push(siteBase+'/'+lang+'/articles/'+encodeURIComponent(lang==='ar'?a.slug_ar:a.slug_en));
 fs.writeFileSync(path.join(root,'growth-urls-v61.json'),JSON.stringify(growthUrls,null,2));
+const growthXml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+growthUrls.map(u=>'<url><loc>'+u.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>').join('\n')+'\n</urlset>';
+fs.writeFileSync(path.join(root,'sitemap-growth.xml'),growthXml);
+
 
 fs.writeFileSync(path.join(root,'growth-v60.json'),JSON.stringify({cards:CARDS,pages:PAGES.map(x=>x.id),articles:ARTICLES.map(x=>x.id)},null,2));
