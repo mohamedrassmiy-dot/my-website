@@ -262,6 +262,7 @@ for(const lang of ['ar','en']){
  html=html.slice(0,marker)+portfolioBody+html.slice(end);
  html=html.replace(/<title>[\s\S]*?<\/title>/i,`<title>${ar?'أعمال محمد علي رسمي | تسويق رقمي وتجارة إلكترونية':'Mohamed Ali Rassmiy Portfolio | Digital Marketing & E-commerce'}</title>`);
  html=html.replace(/<meta\s+name=["']description["'][^>]*>/i,`<meta name="description" content="${ar?'أعمال محمد علي رسمي في التسويق الرقمي، SEO، التجارة الإلكترونية، الحملات، الفعاليات والكتالوجات. تواصل عبر واتساب ولينكدإن لمناقشة مشروعك.':'Explore Mohamed Ali Rassmiy’s digital marketing, SEO, e-commerce, campaigns, events and catalogue work. Connect on WhatsApp or LinkedIn.'}">`);
+ html=html.replace(/(<a class="lang" href=")[^"]+(")/, '$1/'+(ar?'en':'ar')+'/portfolio.html$2');
  fs.writeFileSync(file,html);
  for(const name of fs.readdirSync(path.join(root,lang)).filter(n=>n.endsWith('.html'))){
   const f=path.join(root,lang,name);let h=fs.readFileSync(f,'utf8');
