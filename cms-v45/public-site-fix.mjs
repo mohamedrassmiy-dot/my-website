@@ -7,7 +7,7 @@ const stylesPath = path.join(root,'assets','styles.css');
 const jsPath = path.join(root,'assets','site.js');
 
 const mobileCss = String.raw`
-/* Rassmiy public responsive navigation v5.0 */
+/* Rassmiy public responsive navigation v5.2 */
 html,body{max-width:100%;overflow-x:clip}
 body{min-width:0}
 .container{max-width:1180px}
@@ -96,7 +96,7 @@ body{min-width:0}
 `;
 let styles = fs.readFileSync(stylesPath,'utf8');
 styles = styles.replace(/\/\* Rassmiy public mobile navigation v4\.6 \*\/[\s\S]*?(?=\/\* Rassmiy public responsive navigation v4\.7 \*\/|$)/,'');
-if(!styles.includes('Rassmiy public responsive navigation v5.0')) styles += '\n'+mobileCss+'\n';
+if(!styles.includes('Rassmiy public responsive navigation v5.2')) styles += '\n'+mobileCss+'\n';
 fs.writeFileSync(stylesPath,styles);
 
 const js = String.raw`(()=>{
@@ -126,7 +126,7 @@ const js = String.raw`(()=>{
         if(n.querySelectorAll('a').length < 4){
           const ar=document.documentElement.lang==='ar';
           const links=ar
-            ? [['الرئيسية','/ar/index.html'],['من أنا','/ar/about.html'],['الخدمات','/ar/services.html'],['الأعمال','/ar/portfolio.html'],['المقالات','/ar/articles'],['تواصل معي','/ar/contact.html']]
+            ? [['الرئيسية','/'],['من أنا','/ar/about.html'],['الخدمات','/ar/services.html'],['الأعمال','/ar/portfolio.html'],['المقالات','/ar/articles'],['تواصل معي','/ar/contact.html']]
             : [['Home','/en/index.html'],['About','/en/about.html'],['Services','/en/services.html'],['Portfolio','/en/portfolio.html'],['Articles','/en/articles'],['Contact','/en/contact.html']];
           n.replaceChildren(...links.map(([label,href])=>{const a=document.createElement('a');a.href=href;a.textContent=label;return a;}));
         }
@@ -186,7 +186,7 @@ function injectSeo(file,lang,name){
   html=html.replace(/<meta\s+property=["']og:url["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+property=["']og:locale(?::alternate)?["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+name=["']robots["'][^>]*>/gi,'');
-  html=html.replace(/<meta\s+name=[#']googlebot["'][^>]*>/gi,'');
+  html=html.replace(/<meta\s+name=["']googlebot["'][^>]*>/gi,'');
   const robots=isPrivate?'noindex,nofollow':'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
   const tags=`\n<meta name="robots" content="${robots}">\n<meta name="googlebot" content="${robots}">\n<link rel="canonical" href="${canonical}">\n<link rel="alternate" hreflang="${lang}" href="${altSame}">\n<link rel="alternate" hreflang="${counterpartLang}" href="${altOther}">\n<link rel="alternate" hreflang="x-default" href="${xDefault}">\n<meta property="og:url" content="${canonical}">\n<meta property="og:locale" content="${lang==='ar'?'ar_SA':'en_US'}">\n<meta property="og:locale:alternate" content="${lang==='ar'?'en_US':'ar_SA'}">\n`;
   html=html.replace(/<\/head>/i,tags+'</head>');
