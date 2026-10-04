@@ -9,7 +9,7 @@ for(const lang of ['ar','en']){const dir=path.join(root,lang);if(!fs.existsSync(
 // Security helpers: CAPTCHA verification + bounded attack/event recorder.
 if(!app.includes('RASSMIY_SECURITY_V61')){
  const anchor='function adminContent(state,session,url){';
- if(!app.includes(anchor))throw new Error('security anchor missing');
+ // Anchor may differ between CMS builds; appending top-level helpers is valid ESM.\n const hasAnchor=app.includes(anchor);
  const helper=`// RASSMIY_SECURITY_V61
 const SECURITY_MAX_EVENTS=500;
 function securityIp(req){return String(req.headers.get('x-nf-client-connection-ip')||req.headers.get('x-forwarded-for')||'unknown').split(',')[0].trim().slice(0,80)}
@@ -25,7 +25,7 @@ async function verifyRecaptchaV61(token,req){
  try{const body=new URLSearchParams({secret,response:String(token),remoteip:securityIp(req)});const r=await fetch('https://www.google.com/recaptcha/api/siteverify',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});const j=await r.json();return {ok:!!j.success,reason:j['error-codes']?.join(',')||''};}catch{return {ok:false,reason:'verification-error'};}
 }
 `;
- app=app.replace(anchor,helper+anchor);
+ app=hasAnchor?app.replace(anchor,helper+anchor):app+'\\n'+helper;
 }
 
 // Harden lead endpoint without consuming the request twice: inject checks immediately after its existing form parser.
