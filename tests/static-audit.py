@@ -27,6 +27,9 @@ for file in root.rglob('*.html'):
         assert target.exists() or dynamic,(file,value);checks+=1
         if tag=='img': assert 'alt' in a,(file,'alt');checks+=1
 for lang in ['ar','en']:
+    home=(root/lang/'index.html').read_text()
+    assert '+215%' not in home and '+340%' not in home,(lang,'unverified metrics');checks+=1
+    assert home.count('/articles/')>=6,(lang,'real article destinations');checks+=1
     text=(root/lang/'portfolio.html').read_text()
     assert text.count('class="work-card"')==6;checks+=1
     assert 'href="/'+('en' if lang=='ar' else 'ar')+'/portfolio.html"' in text;checks+=1
