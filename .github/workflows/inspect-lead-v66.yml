@@ -1,0 +1,12 @@
+name: Inspect Lead Route v6.6
+on:
+  push:
+    branches: [inspect-lead-v66]
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          cat cms-v45/app.* | base64 -d | gunzip > /tmp/app.mjs
+          node -e "const s=require('fs').readFileSync('/tmp/app.mjs','utf8');const i=s.indexOf('/api/lead');console.log(s.slice(Math.max(0,i-1200),i+5000))"
