@@ -4,7 +4,7 @@ if(!s.includes('RASSMIY_DB_ENCRYPTION_V62')){
  const load=/async function loadState\(([^)]*)\)\s*\{/;const save=/async function saveState\(([^)]*)\)\s*\{/;
  const lm=s.match(load),sm=s.match(save);if(!lm||!sm)throw new Error('state persistence functions not found');
  s=s.replace(load,'async function loadStateRaw($1){').replace(save,'async function saveStateRaw($1){');
- const anchor='function adminContent(state,session,url){';if(!s.includes(anchor))throw new Error('admin anchor missing');
+ const anchor='function adminContent(state,session,url){';const hasAnchor=s.includes(anchor);
  const helper=`// RASSMIY_DB_ENCRYPTION_V62
 const ENC_PREFIX='enc:v1:';
 async function encKeyV62(){const raw=process.env.DATA_ENCRYPTION_KEY||'';if(!raw)return null;const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(raw));return crypto.subtle.importKey('raw',digest,{name:'AES-GCM'},false,['encrypt','decrypt']);}
@@ -17,7 +17,7 @@ async function revealStateV62(state){const key=await encKeyV62();if(!key)return 
 async function loadState(...args){return revealStateV62(await loadStateRaw(...args));}
 async function saveState(state,...args){return saveStateRaw(await protectStateV62(state),...args);}
 `;
- s=s.replace(anchor,helper+anchor);
+ s=hasAnchor?s.replace(anchor,helper+anchor):s+'\\n'+helper;
 }
 fs.writeFileSync(f,s);
 fs.writeFileSync(path.join(root,'db-encryption-v62.json'),JSON.stringify({algorithm:'AES-256-GCM',keySource:'Netlify secret environment variable',encryptedFields:['leads.name','leads.email','leads.phone','leads.message'],plaintextMigration:'automatic-on-next-save'},null,2));
