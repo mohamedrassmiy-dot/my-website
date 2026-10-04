@@ -1,4 +1,4 @@
-name: Live QA Growth v6.1.3
+name: Live QA Growth v6.1.4
 
 on:
   push:
@@ -9,25 +9,25 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify growth CMS preview 13
+      - name: Verify growth CMS preview 14
         shell: bash
         run: |
           set -euo pipefail
-          BASE="https://deploy-preview-13--rassmiy-marketing.netlify.app"
+          BASE="https://deploy-preview-14--rassmiy-marketing.netlify.app"
           check() {
             local path="$1"
             code=$(curl -L -s -o /tmp/page -w "%{http_code}" "$BASE$path")
             echo "$path -> $code"
             test "$code" = "200"
           }
-          for path in / /api/health /api/content-cards /sitemap.xml /en/articles             /en/pages/seo-consultant-riyadh             /en/pages/digital-marketing-consultant-riyadh             /en/pages/ecommerce-growth-saudi-arabia             /en/articles/digital-marketing-strategy-saudi-arabia-2026             /en/articles/seo-vs-google-ads-saudi-arabia             /en/articles/choose-seo-consultant-riyadh             /en/articles/aeo-geo-ai-search-saudi-arabia             /en/articles/ecommerce-growth-strategy-saudi-arabia             /en/articles/b2b-lead-generation-saudi-arabia             /assets/admin.js /assets/site.js; do check "$path"; done
+          for path in / /api/health /api/content-cards /sitemap.xml /sitemap-growth.xml /en/articles             /en/pages/seo-consultant-riyadh             /en/pages/digital-marketing-consultant-riyadh             /en/pages/ecommerce-growth-saudi-arabia             /en/articles/digital-marketing-strategy-saudi-arabia-2026             /en/articles/seo-vs-google-ads-saudi-arabia             /en/articles/choose-seo-consultant-riyadh             /en/articles/aeo-geo-ai-search-saudi-arabia             /en/articles/ecommerce-growth-strategy-saudi-arabia             /en/articles/b2b-lead-generation-saudi-arabia             /assets/admin.js /assets/site.js; do check "$path"; done
           curl -Ls "$BASE/api/content-cards" | grep -Fq '"id":"service-seo"'
           curl -Ls "$BASE/api/content-cards" | grep -Fq '"id":"case-ecommerce"'
           curl -Ls "$BASE/en/services.html" | grep -Fq 'Engagement models'
           curl -Ls "$BASE/en/index.html" | grep -Fq 'Integrated marketing that connects visibility to leads and revenue'
           curl -Ls "$BASE/en/articles" | grep -Fq 'Digital Marketing Strategy in Saudi Arabia'
-          curl -Ls "$BASE/sitemap.xml" | grep -Fq '/en/pages/seo-consultant-riyadh'
-          curl -Ls "$BASE/sitemap.xml" | grep -Fq '/en/articles/b2b-lead-generation-saudi-arabia'
+          curl -Ls "$BASE/sitemap-growth.xml" | grep -Fq '/en/pages/seo-consultant-riyadh'
+          curl -Ls "$BASE/sitemap-growth.xml" | grep -Fq '/en/articles/b2b-lead-generation-saudi-arabia'
           curl -Ls "$BASE/assets/admin.js" | grep -Fq '__RASSMIY_CARD_MANAGER_V60__'
           curl -Ls "$BASE/assets/site.js" | grep -Fq '__RASSMIY_CARDS_V60__'
-          echo "LIVE_GROWTH_QA_V613=PASS"
+          echo "LIVE_GROWTH_QA_V614=PASS"
