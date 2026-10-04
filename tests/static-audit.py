@@ -36,6 +36,7 @@ for file in root.rglob('*.html'):
         if tag=='img': assert 'alt' in a,(file,'alt');checks+=1
 for lang in ['ar','en']:
     home=(root/lang/'index.html').read_text()
+    assert 'Full Stack Marketing' in home and ('FULL STACK MARKETING' in home or 'خبير التسويق المتكامل' in home),(lang,'Full Stack Marketing positioning');checks+=1
     assert '+215%' not in home and '+340%' not in home,(lang,'unverified metrics');checks+=1
     assert home.count('/articles/')>=6,(lang,'real article destinations');checks+=1
     text=(root/lang/'portfolio.html').read_text()
