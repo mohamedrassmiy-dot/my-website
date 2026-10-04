@@ -6,7 +6,7 @@ const app=fs.readFileSync(path.join(root,'netlify/functions/app.mjs'),'utf8');
 const admin=fs.readFileSync(path.join(root,'assets/admin.js'),'utf8');
 const site=fs.readFileSync(path.join(root,'assets/site.js'),'utf8');
 const css=fs.readFileSync(path.join(root,'assets/styles.css'),'utf8');
-must(app.includes("path==='/api/cards'"),'public cards API route');
+must(app.includes("path==='/api/content-cards'"),'public cards API route');
 must(app.includes("action==='save_cards'"),'authenticated cards save action');
 must(!app.includes('RASSMIY_SEED_MIGRATION_V60'),'core CMS state is not auto-seeded');
 must(app.includes('RASSMIY_DEFAULT_CARDS_V60'),'default card fallback');
