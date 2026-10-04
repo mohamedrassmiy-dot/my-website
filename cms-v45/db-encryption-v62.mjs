@@ -17,7 +17,7 @@ async function revealStateV62(state){const key=await encKeyV62();if(!key)return 
 async function loadState(...args){return revealStateV62(await loadStateRaw(...args));}
 async function saveState(state,...args){return saveStateRaw(await protectStateV62(state),...args);}
 `;
- s=hasAnchor?s.replace(anchor,helper+anchor):s+'\\n'+helper;
+ s=hasAnchor?s.replace(anchor,helper+anchor):s+String.fromCharCode(10)+helper;
 }
 fs.writeFileSync(f,s);
 fs.writeFileSync(path.join(root,'db-encryption-v62.json'),JSON.stringify({algorithm:'AES-256-GCM',keySource:'Netlify secret environment variable',encryptedFields:['leads.name','leads.email','leads.phone','leads.message'],plaintextMigration:'automatic-on-next-save'},null,2));
