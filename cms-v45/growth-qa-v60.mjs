@@ -34,4 +34,5 @@ must(meta.pages.length===3,'lead landing page definitions');
 must(meta.articles.length===6,'SEO article definitions');
 const urls=JSON.parse(fs.readFileSync(path.join(root,'growth-urls-v61.json'),'utf8'));
 must(urls.length===20,'growth URL inventory');
+must(fs.existsSync(path.join(root,'sitemap-growth.xml')),'sitemap-growth.xml exists');
 console.log('GROWTH_QA_V61=PASS');
