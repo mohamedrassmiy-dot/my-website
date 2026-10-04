@@ -1,0 +1,28 @@
+name: Live QA v5.3
+
+on:
+  push:
+    branches:
+      - qa-live-v53
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify preview pages and click targets
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://deploy-preview-8--rassmiy-marketing.netlify.app"
+          for path in / /ar/services.html /en/services.html /ar/portfolio.html /en/portfolio.html /ar/contact.html /en/contact.html /robots.txt /sitemap.xml /admin; do
+            code=$(curl -L -s -o /tmp/page -w "%{http_code}" "$BASE$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+          done
+          curl -Ls "$BASE/ar/services.html" | grep -q 'contact.html?service=seo-aeo'
+          curl -Ls "$BASE/en/services.html" | grep -q 'contact.html?service=seo-aeo'
+          curl -Ls "$BASE/ar/portfolio.html" | grep -q 'contact.html?project=ecommerce-store'
+          curl -Ls "$BASE/ar/contact.html" | grep -q 'wa.me/966536741442'
+          curl -Ls "$BASE/ar/contact.html" | grep -q 'linkedin.com/company/rassmiy-marketing/'
+          curl -Ls "$BASE/assets/site.js" | grep -q '__RASSMIY_CLICKS_V53__'
+          echo "LIVE_QA_V53=PASS"
