@@ -176,10 +176,10 @@ if(!app.includes("save_cards:'settings'")){
   app=app.replace("save_site_settings:'settings',","save_site_settings:'settings',save_cards:'settings',");
 }
 
-if(!app.includes("path==='/api/cards'")){
+if(!app.includes("path==='/api/content-cards'")){
   const anchor="  if(path==='/api/health')";
   if(!app.includes(anchor)) throw new Error('api health anchor missing');
-  app=app.replace(anchor,`  if(path==='/api/cards' && req.method==='GET'){ try{ const payload={cards:[...rassmiyCards(state)].sort((a,b)=>Number(a.order||0)-Number(b.order||0))}; return text(JSON.stringify(payload),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'}); }catch(e){ return text(JSON.stringify({cards:RASSMIY_DEFAULT_CARDS_V60,error:'fallback'}),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'}); } }
+  app=app.replace(anchor,`  if(path==='/api/content-cards' && req.method==='GET'){ let cards=[]; try{ cards=typeof rassmiyCards==='function'?[...rassmiyCards(state)]:[]; }catch{} if(!cards.length&&typeof RASSMIY_DEFAULT_CARDS_V60!=='undefined')cards=[...RASSMIY_DEFAULT_CARDS_V60]; cards.sort((a,b)=>Number(a.order||0)-Number(b.order||0)); return new Response(JSON.stringify({cards}),{status:200,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'no-store','X-Robots-Tag':'noindex'}}); }
 `+anchor);
 }
 
@@ -266,7 +266,7 @@ js+=`
  const renderCase=(c)=>'<article class="case-card is-clickable-card" data-card-key="'+esc(c.id)+'" data-card-link="'+esc(field(c,'cta_url'))+'">'+(c.image?'<img class="editable-card-media" src="'+esc(c.image)+'" alt="'+esc(field(c,'alt')||field(c,'title'))+'">':'')+(field(c,'eyebrow')?'<div class="card-eyebrow">'+esc(field(c,'eyebrow'))+'</div>':'')+'<h3>'+esc(field(c,'title'))+'</h3><p>'+esc(field(c,'description'))+'</p>'+(field(c,'metric')?'<div class="card-metric">'+esc(field(c,'metric'))+'</div>':'')+(field(c,'cta_label')?'<a class="case-link" href="'+esc(field(c,'cta_url')||'#')+'">'+esc(field(c,'cta_label'))+'</a>':'')+'</article>';
  async function hydrate(){
   try{
-   const r=await fetch('/api/cards',{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)return;
+   const r=await fetch('/api/content-cards',{headers:{Accept:'application/json'},cache:'no-store'});if(!r.ok)return;
    const data=await r.json(),cards=(data.cards||[]).filter(c=>c.enabled!==false).sort((a,b)=>(a.order||0)-(b.order||0));
    for(const collection of ['service','portfolio']){
     const selector=collection==='service'?'.service-card':'.case-card';
@@ -340,7 +340,7 @@ adminJs+=`
   const L=labels();const section=document.createElement('section');section.className='panel card-manager';section.id='card-manager';
   section.innerHTML='<div class="panel-head"><div><h2>'+L.title+'</h2><p>'+L.sub+'</p></div></div><div class="card-manager-toolbar"><button type="button" class="secondary-btn" data-add-card>'+L.add+'</button><button type="button" class="primary-btn" data-save-cards>'+L.save+'</button></div><div class="card-editor-list"></div><p class="card-manager-status"></p>';
   main.appendChild(section);
-  try{const r=await fetch('/api/cards',{cache:'no-store'});const d=await r.json();cards=Array.isArray(d.cards)?d.cards:[];}catch{cards=[];}
+  try{const r=await fetch('/api/content-cards',{cache:'no-store'});const d=await r.json();cards=Array.isArray(d.cards)?d.cards:[];}catch{cards=[];}
   render();
   section.addEventListener('input',e=>{if(e.target.matches('[data-f]'))syncFromDom()});
   section.addEventListener('click',e=>{
