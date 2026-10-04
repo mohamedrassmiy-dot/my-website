@@ -85,10 +85,14 @@ const behavior=String.raw`
   const qsa=s=>[...document.querySelectorAll(s)];
   const ar=(document.documentElement.lang||'ar').startsWith('ar');
 
-  qsa('[data-card-link]').forEach(card=>{
+  qsa('.service-card,.case-card,[data-card-link]').forEach(card=>{
+    if(!card.getAttribute('data-card-link')){
+      const fallback=card.querySelector('a.link,a.case-link,a[href^="https://wa.me/"],a[href]');
+      if(fallback?.href)card.setAttribute('data-card-link',fallback.href);
+    }
     const href=card.getAttribute('data-card-link'); if(!href)return;
     card.classList.add('is-clickable-card'); card.tabIndex=0; card.setAttribute('role','link');
-    const go=()=>{location.href=href};
+    const go=()=>{if(/^https?:\/\//i.test(href))window.location.assign(href);else location.href=href};
     card.addEventListener('click',e=>{if(e.target.closest('a,button,input,textarea,select,label'))return;go()});
     card.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('a,button,input,textarea,select,label')){e.preventDefault();go()}});
   });
@@ -137,7 +141,7 @@ write(siteJs,js);
 const cssFile=path.join(root,'assets','styles.css');
 let css=read(cssFile);
 const extra=String.raw`
-/* Rassmiy click/interaction fixes v5.3 */
+/* Rassmiy click/interaction fixes v5.4 */
 .is-clickable-card{cursor:pointer;transition:transform .18s ease,box-shadow .18s ease}
 .is-clickable-card:hover{transform:translateY(-2px);box-shadow:0 14px 32px rgba(7,43,83,.12)}
 .is-clickable-card:focus-visible{outline:3px solid #ff7a19;outline-offset:3px}
@@ -146,5 +150,5 @@ const extra=String.raw`
 .prose a{color:#0b5e92;text-decoration:underline;text-underline-offset:3px;overflow-wrap:anywhere}
 @media(max-width:620px){.case-link{margin:0 16px 16px}.is-clickable-card{touch-action:manipulation}}
 `;
-if(!css.includes('Rassmiy click/interaction fixes v5.3'))css+='\n'+extra+'\n';
+if(!css.includes('Rassmiy click/interaction fixes v5.4'))css+='\n'+extra+'\n';
 write(cssFile,css);
