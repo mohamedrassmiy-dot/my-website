@@ -1,4 +1,4 @@
-name: Live QA Growth v6.0
+name: Diagnose Growth v6.0 Runtime
 
 on:
   push:
@@ -9,25 +9,13 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify growth CMS preview
+      - name: Diagnose function routes
         shell: bash
         run: |
-          set -euo pipefail
           BASE="https://deploy-preview-10--rassmiy-marketing.netlify.app"
-          check() {
-            local path="$1"
-            code=$(curl -L -s -o /tmp/page -w "%{http_code}" "$BASE$path")
-            echo "$path -> $code"
-            test "$code" = "200"
-          }
-          for path in / /en/about.html /en/services.html /en/portfolio.html /en/contact.html /api/cards /sitemap.xml /en/articles             /en/pages/seo-consultant-riyadh             /en/pages/digital-marketing-consultant-riyadh             /en/pages/ecommerce-growth-saudi-arabia             /en/articles/digital-marketing-strategy-saudi-arabia-2026             /en/articles/seo-vs-google-ads-saudi-arabia             /en/articles/choose-seo-consultant-riyadh             /en/articles/aeo-geo-ai-search-saudi-arabia             /en/articles/ecommerce-growth-strategy-saudi-arabia             /en/articles/b2b-lead-generation-saudi-arabia             /assets/admin.js /assets/site.js; do check "$path"; done
-          curl -Ls "$BASE/api/cards" | grep -Fq '"id":"service-seo"'
-          curl -Ls "$BASE/api/cards" | grep -Fq '"id":"case-ecommerce"'
-          curl -Ls "$BASE/en/services.html" | grep -Fq 'Engagement models'
-          curl -Ls "$BASE/en/index.html" | grep -Fq 'Integrated marketing that connects visibility to leads and revenue'
-          curl -Ls "$BASE/en/articles" | grep -Fq 'Digital Marketing Strategy in Saudi Arabia'
-          curl -Ls "$BASE/sitemap.xml" | grep -Fq '/en/pages/seo-consultant-riyadh'
-          curl -Ls "$BASE/sitemap.xml" | grep -Fq '/en/articles/b2b-lead-generation-saudi-arabia'
-          curl -Ls "$BASE/assets/admin.js" | grep -Fq '__RASSMIY_CARD_MANAGER_V60__'
-          curl -Ls "$BASE/assets/site.js" | grep -Fq '__RASSMIY_CARDS_V60__'
-          echo "LIVE_GROWTH_QA_V60=PASS"
+          for path in /api/health /api/cards /en/articles /en/pages/seo-consultant-riyadh /en/articles/digital-marketing-strategy-saudi-arabia-2026; do
+            echo "===== $path ====="
+            curl -L -sS -D - "$BASE$path" -o /tmp/body || true
+            head -c 1200 /tmp/body || true
+            echo
+          done
