@@ -1,4 +1,4 @@
-name: Inspect Cards API v6.1.4
+name: Inspect Built App v6.1.4
 
 on:
   push:
@@ -9,8 +9,34 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - run: |
-          BASE="https://deploy-preview-14--rassmiy-marketing.netlify.app"
-          echo "=== BODY ==="
-          curl -Ls "$BASE/api/content-cards" | head -c 10000
-          echo
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm install --no-audit --no-fund
+      - name: Build and inspect app
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf release && mkdir release
+          unzip -q site.zip -d release
+          rm -f release/netlify.toml release/_redirects
+          mkdir -p release/netlify/functions release/assets
+          cat cms-v45/app.* | base64 -d | gunzip > release/netlify/functions/app.mjs
+          node cms-v45/seo-mobile-v46.mjs release/netlify/functions/app.mjs
+          base64 -d cms-v45/admin-v45.js.b64 | gunzip > release/assets/admin.js
+          base64 -d cms-v4/admin.css.b64 | gunzip > release/assets/admin.css
+          cat cms-v4/admin-layout-fix.css >> release/assets/admin.css
+          cat cms-v45/admin-bilingual.css >> release/assets/admin.css
+          cat cms-v45/admin-mobile-v46.css >> release/assets/admin.css
+          node cms-v45/public-site-fix.mjs release
+          node cms-v45/qa-fixes.mjs release
+          node cms-v45/ops-v51.mjs release
+          node cms-v45/click-fixes-v53.mjs release
+          node cms-v45/growth-cms-v60.mjs release
+          echo "=== CONST MATCHES ==="
+          grep -n "RASSMIY_DEFAULT_CARDS_V60\|rassmiyCards\|api/content-cards" release/netlify/functions/app.mjs | head -30 || true
+          echo "=== ADMIN CONTENT MATCH ==="
+          grep -n "function adminContent" release/netlify/functions/app.mjs | head -5 || true
