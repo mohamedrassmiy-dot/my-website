@@ -1,0 +1,11 @@
+name: Publish Rassmiy Production v6.3
+on:
+  push:
+    branches: [publish-v63-production]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish to Netlify production
+        run: npx -y @netlify/mcp@latest --site-id dbf13d3b-88e6-4396-ae96-4adb2ab937a8 --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..qW_IhXGrxsDWP9fM.das6aLT7HtoljCAqf3gabe3epDfHNJzvvtgnZIE2AAJNPcsm9FHLt05gkh1udPnJtBzdWZBsGUOglsM7KsxnkruaDy0nTpu8c22btINTO3EYOgVap80xTQreNpChM7y3jD9w7v_MWnkBk3viZDCSSQO_j03NIz45jbjJ_AWWhi76xUS0FwqnNZKidF-m7aydExeGi9M1g5IApBmlAFKU7tmFVnQdU0phrHdiccZNB77Fx_7b12lgEQCijouqSPOX20IlLVvMRmBZj96AP5uphNRtm5lAONDmamgxOT0cteV8vyRqwlPeAwO_1ioX2IRcYa1UFNIP-adul78fcHnCmLuTcE1tsPpeZpVqjgE3H3G7UsQ9MYyQflkpk27gKteuZbY-xBKo.iWQ1JXunAAHU3imuGlrQQw"
