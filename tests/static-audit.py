@@ -16,6 +16,14 @@ for file in root.rglob('*.html'):
         for name in ['description']:
             assert any(t=='meta' and a.get('name')==name and a.get('content') for t,a in p.tags),(file,name)
             checks+=1
+        assert sum(t=='link' and a.get('rel')=='canonical' for t,a in p.tags)==1,(file,'canonical');checks+=1
+        for lang in ['ar','en','x-default']:
+            assert sum(t=='link' and a.get('hreflang')==lang for t,a in p.tags)==1,(file,lang);checks+=1
+        for property in ['og:title','og:description','og:image']:
+            assert any(t=='meta' and a.get('property')==property and a.get('content') for t,a in p.tags),(file,property);checks+=1
+        import re
+        for data in re.findall(r'<script type="application/ld\+json">(.*?)</script>',file.read_text(),re.S):json.loads(data);checks+=1
+        assert any(t=='main' and a.get('id')=='main-content' for t,a in p.tags),(file,'main landmark');checks+=1
         assert sum(t=='h1' for t,a in p.tags)==1,(file,'h1');checks+=1
         assert sum(t=='a' and a.get('class')=='whatsapp-floating' for t,a in p.tags)==1,(file,'whatsapp');checks+=1
         assert any(t=='a' and a.get('href')=='https://www.linkedin.com/company/rassmiy-marketing/' for t,a in p.tags),(file,'company');checks+=1

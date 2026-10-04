@@ -59,6 +59,9 @@ r=await request('/api/lead',{name:'Test',message:'x'.repeat(10001)},false);ok(r.
 r=await request('/admin/action',{csrf,action:'save_cards',cards_json:JSON.stringify([{id:'evil',cta_url_en:'javascript:alert(1)'}])});ok(r.res.headers.get('location').includes('error'),'stored card script URL rejected');
 r=await request('/admin/action',{csrf,action:'save_redirect',from:'/unsafe',to:'javascript:alert(1)',status:'301'});ok(r.res.headers.get('location').includes('error'),'script redirect rejected');
 r=await request('/admin/action',{...page,slug_ar:'security-ar',slug_en:'security-en',status:'published',content_en:'<p>Safe</p><script>alert(1)</script><img src="x" onerror="alert(1)"><a href="javascript:alert(1)">link</a>'});ok(!r.res.headers.get('location').includes('error'),'safe rich content stored');r=await request('/en/pages/security-en');ok(r.res.status===200&&!r.text.includes('alert(1)')&&!r.text.includes('onerror='),'stored XSS stripped');
+r=await request('/robots.txt',null,false);ok(r.res.status===200,'crawler policy available');
+for(const group of r.text.split(/(?=User-agent:)/).filter(x=>x.startsWith('User-agent:'))){ok(group.includes('Disallow: /admin')&&group.includes('Disallow: /api/'),'private routes excluded for each crawler group');}
+r=await request('/sitemap.xml',null,false);ok(r.text.includes('marketing-attribution-guide')&&r.text.includes('b2b-lead-generation-playbook-saudi'),'static generated articles included in main sitemap');ok(r.text.includes('hreflang="ar"')&&r.text.includes('hreflang="en"'),'sitemap language alternatives');
 const api=await request('/api/content-cards');ok(api.res.status===200&&JSON.parse(api.text).cards.length>=13,'public card fallback');
 // Use a synthetic environment key only inside this process; inspect the raw mock persistence.
 process.env.DATA_ENCRYPTION_KEY='Synthetic-QA-Key-Only-Not-A-Production-Secret';
