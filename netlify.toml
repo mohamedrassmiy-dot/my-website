@@ -13,4 +13,4 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "SAMEORIGIN"
 
-# Hotfix: remove /admin <-> /admin/ redirect loop
+# Production trigger: admin redirect-loop hotfix v4.2.1
