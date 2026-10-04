@@ -160,7 +160,7 @@ if(!app.includes('const RASSMIY_DEFAULT_CARDS_V60=')){
 `const RASSMIY_DEFAULT_CARDS_V60=${cardsJson};
 const RASSMIY_SEED_PAGES_V60=${pagesJson};
 const RASSMIY_SEED_ARTICLES_V60=${articlesJson};
-function rassmiyCards(state){ try{ const x=JSON.parse(String(state.settings?.cards_json||'[]')); return Array.isArray(x)?x:[]; }catch{return [];} }
+function rassmiyCards(state){ try{ const raw=String(state.settings?.cards_json||'').trim(); if(!raw)return RASSMIY_DEFAULT_CARDS_V60; const x=JSON.parse(raw); return Array.isArray(x)?x:RASSMIY_DEFAULT_CARDS_V60; }catch{return RASSMIY_DEFAULT_CARDS_V60;} }
 function adminContent(state,session,url){`);
 }
 
@@ -190,9 +190,16 @@ if(!app.includes("save_cards:'settings'")){
 if(!app.includes("path==='/api/cards'")){
   const anchor="  if(path==='/api/health')";
   if(!app.includes(anchor)) throw new Error('api health anchor missing');
-  app=app.replace(anchor,`  if(path==='/api/cards' && req.method==='GET'){ const payload={cards:rassmiyCards(state).sort((a,b)=>Number(a.order||0)-Number(b.order||0))}; return saveAnd(text(JSON.stringify(payload),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'})); }
+  app=app.replace(anchor,`  if(path==='/api/cards' && req.method==='GET'){ try{ const payload={cards:[...rassmiyCards(state)].sort((a,b)=>Number(a.order||0)-Number(b.order||0))}; return text(JSON.stringify(payload),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'}); }catch(e){ return text(JSON.stringify({cards:RASSMIY_DEFAULT_CARDS_V60,error:'fallback'}),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'}); } }
 `+anchor);
 }
+
+
+if(app.includes("const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const homeAlts=")){
+ app=app.replace("const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const homeAlts=",
+ "const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const growthStatic=[...RASSMIY_SEED_PAGES_V60.flatMap(p=>['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/pages/'+encodeURIComponent(lang==='ar'?p.slug_ar:p.slug_en)}))),...['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/articles'})),...RASSMIY_SEED_ARTICLES_V60.flatMap(a=>['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/articles/'+encodeURIComponent(lang==='ar'?a.slug_ar:a.slug_en)})))]; for(const x of growthStatic)add(x.href,'','0.8','weekly',[]); const homeAlts=");
+}
+// GROWTH_SITEMAP_V61
 
 fs.writeFileSync(appFile,app);
 
@@ -365,5 +372,49 @@ adminJs+=`
 `;
 fs.writeFileSync(adminJsFile,adminJs);
 }
+
+
+/* STATIC_GROWTH_PAGES_V61 */
+const escapeHtml=v=>String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+function publicLayout(lang,{title,meta,canonical,alt,body,type='website',schema=''}){
+ const ar=lang==='ar',home=ar?'/':'/en/index.html';
+ const nav=`<header class="topbar"><div class="container nav"><a class="brand" href="${home}"><img src="/assets/logo.jpg" alt="Rassmiy Marketing"><span class="brand-copy"><b>RASSMIY</b><span>MARKETING</span></span></a><nav class="menu"><a href="${home}">${ar?'الرئيسية':'Home'}</a><a href="/${lang}/about.html">${ar?'من أنا':'About'}</a><a href="/${lang}/services.html">${ar?'الخدمات':'Services'}</a><a href="/${lang}/portfolio.html">${ar?'الأعمال':'Portfolio'}</a><a href="/${lang}/articles">${ar?'المقالات':'Articles'}</a><a href="/${lang}/contact.html">${ar?'تواصل':'Contact'}</a></nav><div class="nav-actions"><a class="lang" href="${alt}">${ar?'EN':'AR'}</a><a class="btn primary desktop-action" href="/${lang}/contact.html">${ar?'طلب استشارة →':'Book a consultation →'}</a><button class="mobile-toggle" type="button" aria-label="${ar?'فتح القائمة':'Open menu'}" aria-expanded="false" data-public-menu-toggle>☰</button></div></div></header>`;
+ const footer=`<footer><div class="container footer-grid"><div><b>RASSMIY MARKETING</b><p>${ar?'استراتيجية، تنفيذ وقياس للنمو.':'Strategy, execution and measurement for growth.'}</p></div><div class="social-contact"><a href="mailto:mohamed.rassmiy@gmail.com">mohamed.rassmiy@gmail.com</a><a href="https://wa.me/966536741442">WhatsApp</a><a href="https://www.linkedin.com/company/rassmiy-marketing/" target="_blank" rel="noopener noreferrer">LinkedIn</a></div></div></footer>`;
+ return `<!doctype html><html lang="${lang}" dir="${ar?'rtl':'ltr'}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtml(title)}</title><meta name="description" content="${escapeHtml(meta)}"><meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"><link rel="canonical" href="${escapeHtml(canonical)}"><link rel="alternate" hreflang="${lang}" href="${escapeHtml(canonical)}"><link rel="alternate" hreflang="${ar?'en':'ar'}" href="${escapeHtml(alt)}"><link rel="alternate" hreflang="x-default" href="${escapeHtml(alt)}"><meta property="og:title" content="${escapeHtml(title)}"><meta property="og:description" content="${escapeHtml(meta)}"><meta property="og:url" content="${escapeHtml(canonical)}"><meta property="og:type" content="${type}"><link rel="icon" href="/favicon"><link rel="stylesheet" href="/assets/styles.css">${schema?`<script type="application/ld+json">${schema}</script>`:''}</head><body>${nav}${body}${footer}<script defer src="/assets/site.js"></script></body></html>`;
+}
+const siteBase='https://rassmiy-marketing.netlify.app';
+for(const p of PAGES){
+ for(const lang of ['ar','en']){
+  const ar=lang==='ar',slug=ar?p.slug_ar:p.slug_en,otherSlug=ar?p.slug_en:p.slug_ar;
+  const canonical=siteBase+'/'+lang+'/pages/'+encodeURIComponent(slug),alt=siteBase+'/'+(ar?'en':'ar')+'/pages/'+encodeURIComponent(otherSlug);
+  const title=ar?p.seo_title_ar:p.seo_title_en,meta=ar?p.meta_description_ar:p.meta_description_en;
+  const h1=ar?p.title_ar:p.title_en,desc=ar?p.short_description_ar:p.short_description_en,content=ar?p.content_ar:p.content_en;
+  const body=`<section class="page-hero"><div class="container"><div class="kicker">${ar?'استشارات نمو':'Growth Consulting'}</div><h1>${h1}</h1><p>${desc}</p><div class="hero-ctas"><a class="btn primary" href="/${lang}/contact.html">${ar?'اطلب استشارة →':'Request a consultation →'}</a><a class="btn outline" href="/${lang}/portfolio.html">${ar?'شاهد الأعمال':'View work'}</a></div></div></section><section class="section"><div class="container"><article class="prose">${content}</article></div></section>`;
+  const dir=path.join(root,lang,'pages',slug);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'index.html'),publicLayout(lang,{title,meta,canonical,alt,body,type:'website'}));
+ }
+}
+function articleCard(lang,a){
+ const ar=lang==='ar',slug=ar?a.slug_ar:a.slug_en,title=ar?a.title_ar:a.title_en,desc=ar?a.short_description_ar:a.short_description_en;
+ return `<article class="article-card"><div class="tag">${escapeHtml(a.category||'Growth')}</div><h2><a href="/${lang}/articles/${encodeURIComponent(slug)}">${escapeHtml(title)}</a></h2><p>${escapeHtml(desc)}</p><a class="link" href="/${lang}/articles/${encodeURIComponent(slug)}">${ar?'اقرأ المقال →':'Read article →'}</a></article>`;
+}
+for(const lang of ['ar','en']){
+ const ar=lang==='ar';
+ const cards=ARTICLES.map(a=>articleCard(lang,a)).join('');
+ const indexBody=`<section class="page-hero"><div class="container"><div class="kicker">${ar?'المقالات':'Articles'}</div><h1>${ar?'محتوى عملي للتسويق والنمو':'Practical marketing and growth insights'}</h1><p>${ar?'SEO وAEO وGEO والإعلانات والتجارة الإلكترونية وLead Generation — بهدف تحويل المعرفة إلى قرار وتنفيذ.':'SEO, AEO, GEO, paid media, e-commerce and lead generation—built to turn insight into action.'}</p></div></section><section class="section soft"><div class="container"><div class="articles">${cards}</div></div></section>`;
+ const indexDir=path.join(root,lang,'articles');fs.mkdirSync(indexDir,{recursive:true});
+ fs.writeFileSync(path.join(indexDir,'index.html'),publicLayout(lang,{title:ar?'مقالات التسويق والنمو | Rassmiy Marketing':'Marketing & Growth Articles | Rassmiy Marketing',meta:ar?'مقالات عملية عن SEO والإعلانات والتجارة الإلكترونية وLead Generation في السعودية.':'Practical articles on SEO, paid media, e-commerce and lead generation for Saudi businesses.',canonical:siteBase+'/'+lang+'/articles',alt:siteBase+'/'+(ar?'en':'ar')+'/articles',body:indexBody,type:'website'}));
+ for(const a of ARTICLES){
+  const slug=ar?a.slug_ar:a.slug_en,otherSlug=ar?a.slug_en:a.slug_ar,title=ar?a.seo_title_ar:a.seo_title_en,meta=ar?a.meta_description_ar:a.meta_description_en,headline=ar?a.title_ar:a.title_en,desc=ar?a.short_description_ar:a.short_description_en,content=ar?a.content_ar:a.content_en,ctaTitle=ar?a.cta_title_ar:a.cta_title_en,ctaText=ar?a.cta_text_ar:a.cta_text_en,ctaBtn=ar?a.cta_button_ar:a.cta_button_en,ctaUrl=ar?a.cta_url_ar:a.cta_url_en;
+  const canonical=siteBase+'/'+lang+'/articles/'+encodeURIComponent(slug),alt=siteBase+'/'+(ar?'en':'ar')+'/articles/'+encodeURIComponent(otherSlug);
+  const schema=JSON.stringify({'@context':'https://schema.org','@type':'Article',headline:headline,description:desc,datePublished:a.published_at,author:{'@type':'Person',name:'Mohamed Ali Rassmiy'},publisher:{'@type':'Organization',name:'Rassmiy Marketing'}});
+  const body=`<section class="page-hero"><div class="container"><div class="kicker">${escapeHtml(a.category||'Growth')}</div><h1>${headline}</h1><p>${desc}</p></div></section><section class="section"><div class="container"><article class="prose">${content}</article><aside class="growth-card"><h2>${ctaTitle}</h2><p>${ctaText}</p><a class="btn primary" href="${ctaUrl}">${ctaBtn}</a></aside></div></section>`;
+  const dir=path.join(root,lang,'articles',slug);fs.mkdirSync(dir,{recursive:true});fs.writeFileSync(path.join(dir,'index.html'),publicLayout(lang,{title,meta,canonical,alt,body,type:'article',schema}));
+ }
+}
+const growthUrls=[];
+for(const p of PAGES)for(const lang of ['ar','en'])growthUrls.push(siteBase+'/'+lang+'/pages/'+encodeURIComponent(lang==='ar'?p.slug_ar:p.slug_en));
+growthUrls.push(siteBase+'/ar/articles',siteBase+'/en/articles');
+for(const a of ARTICLES)for(const lang of ['ar','en'])growthUrls.push(siteBase+'/'+lang+'/articles/'+encodeURIComponent(lang==='ar'?a.slug_ar:a.slug_en));
+fs.writeFileSync(path.join(root,'growth-urls-v61.json'),JSON.stringify(growthUrls,null,2));
 
 fs.writeFileSync(path.join(root,'growth-v60.json'),JSON.stringify({cards:CARDS,pages:PAGES.map(x=>x.id),articles:ARTICLES.map(x=>x.id)},null,2));
