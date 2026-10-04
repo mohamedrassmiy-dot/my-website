@@ -164,17 +164,6 @@ function rassmiyCards(state){ try{ const raw=String(state.settings?.cards_json||
 function adminContent(state,session,url){`);
 }
 
-const settingsLine='  state.settings = { ...DEFAULT_SETTINGS, ...(state.settings || {}) };\n';
-if(app.includes(settingsLine)&&!app.includes('RASSMIY_SEED_MIGRATION_V60')){
-  app=app.replace(settingsLine,settingsLine+`  // RASSMIY_SEED_MIGRATION_V60
-  state.pages=Array.isArray(state.pages)?state.pages:[];
-  state.articles=Array.isArray(state.articles)?state.articles:[];
-  if(!String(state.settings.cards_json||'').trim()){state.settings.cards_json=JSON.stringify(RASSMIY_DEFAULT_CARDS_V60);dirty=true;}
-  for(const row of RASSMIY_SEED_PAGES_V60){if(!state.pages.some(x=>x.id===row.id||x.slug_en===row.slug_en)){state.pages.push({...row});dirty=true;}}
-  for(const row of RASSMIY_SEED_ARTICLES_V60){if(!state.articles.some(x=>x.id===row.id||x.slug_en===row.slug_en)){state.articles.push({...row});dirty=true;}}
-`);
-}
-
 if(!app.includes("action==='save_cards'")){
   const start=app.indexOf("    if(action==='save_site_settings')");
   if(start<0) throw new Error('save_site_settings anchor missing');
