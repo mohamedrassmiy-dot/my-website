@@ -1,0 +1,16 @@
+name: Temporary Netlify Production Publish v5.1
+
+on:
+  push:
+    branches:
+      - publish-v51-production
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout release source
+        uses: actions/checkout@v4
+      - name: Publish to Netlify production
+        run: npx -y @netlify/mcp@latest --site-id dbf13d3b-88e6-4396-ae96-4adb2ab937a8 --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..uEi-7bkS4LHE9WOk.QjVDTPV-KZZycz7dxfoZzzP_tKEyqe1CUciGgWMFZtj_hWrSTMxU_uLLhoIXPE_HbCkbiTDyw5UJdAj5j4-NTnXYii6bA744h4wWcz4mIxNeoI0W0PkgY5XWOYQGc2AkB5ZxpUNKdiVqrqmc-t0EZJaIhjGd9alV6z08lyYQggvNSFLakbMGaua02akOon6oKsgIDO0V8FvnIp8r25_6uckTVzfZs7UQ1VS9HQWAkpqReherEJGBd14Q0woE_LUtedFu-SvBAi-D8SMzfX85etnUgc8ZrKDdDuKyb6bKgjZPbMY0imzG6vM3qQf7D5FRQ2F-7nGhpEvalPk24QPo2m5N93D-oCzvpB0-DSimCM1GXxfYqvgHH6ipPq-S_hRqLfnzOuyz.kDCQ1f3h8KqBJY7caCzIMA" --no-wait
