@@ -1,0 +1,7 @@
+[build]
+  command = "rm -rf release && mkdir release && unzip -q site.zip -d release && cd release && npm install --no-audit --no-fund"
+  publish = "release"
+  functions = "release/netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "22"
