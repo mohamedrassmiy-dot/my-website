@@ -218,7 +218,7 @@ if(fs.existsSync(arHome)){
 
 // Portfolio and contact refresh — sourced from Mohamed's supplied CV.
 const socialPersonal='https://www.linkedin.com/in/mohamedrassmiy';
-const socialBrand='https://www.linkedin.com/posts/rassmiy-marketing_rassmiymarketing-seo-aesaevaebaeyaeuabraetaevaezaeraepaesabraepaesaeqaevaet-activity-7511335677968703488-rR74?utm_source=share&utm_medium=member_ios&rcm=ACoAADX1g_EBa1ytxUmm3xI9QE0F-90xrU5giwQ';
+const socialBrand='https://www.linkedin.com/company/rassmiy-marketing/';
 const whatsapp='https://wa.me/966536741442';
 const projects=[
  {id:'ecommerce',tag:'E-COMMERCE',ar:['تطوير تجربة التجارة الإلكترونية','شركة المستقبل لمواد البناء','إدارة تطوير المتجر والموقع، وتنظيم عرض المنتجات والمحتوى ومسار العميل، بالتنسيق مع فرق المبيعات والمنتجات والعمليات.','تخطيط رحلة العميل وتحسين تجربة التصفح|تحسين عرض المنتجات ووصفها وظهورها في البحث|مواءمة المتجر مع الحملات والتنسيق التشغيلي','تجربة متجر تدعم اكتشاف المنتجات وتسهّل الانتقال إلى الاستفسار والشراء.'],en:['E-commerce experience development','Al Mustaqbal Building Materials Company','Managed store and website development, product presentation, content and the customer journey in collaboration with sales, product and operations teams.','Customer journey and browsing experience planning|Product merchandising, content and search visibility|Campaign alignment and operational coordination','A store experience designed to support product discovery, enquiries and purchasing.']},
@@ -262,6 +262,7 @@ for(const lang of ['ar','en']){
  html=html.slice(0,marker)+portfolioBody+html.slice(end);
  html=html.replace(/<title>[\s\S]*?<\/title>/i,`<title>${ar?'أعمال محمد علي رسمي | تسويق رقمي وتجارة إلكترونية':'Mohamed Ali Rassmiy Portfolio | Digital Marketing & E-commerce'}</title>`);
  html=html.replace(/<meta\s+name=["']description["'][^>]*>/i,`<meta name="description" content="${ar?'أعمال محمد علي رسمي في التسويق الرقمي، SEO، التجارة الإلكترونية، الحملات، الفعاليات والكتالوجات. تواصل عبر واتساب ولينكدإن لمناقشة مشروعك.':'Explore Mohamed Ali Rassmiy’s digital marketing, SEO, e-commerce, campaigns, events and catalogue work. Connect on WhatsApp or LinkedIn.'}">`);
+ html=html.replace(/(<a class="lang" href=")[^"]+(")/, '$1/'+(ar?'en':'ar')+'/portfolio.html$2');
  fs.writeFileSync(file,html);
  for(const name of fs.readdirSync(path.join(root,lang)).filter(n=>n.endsWith('.html'))){
   const f=path.join(root,lang,name);let h=fs.readFileSync(f,'utf8');
