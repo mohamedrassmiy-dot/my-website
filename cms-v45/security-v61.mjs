@@ -34,10 +34,11 @@ const leadAnchor="if(path==='/api/lead'";
 const lp=app.indexOf(leadAnchor);
 if(lp<0)throw new Error('lead route missing');
 if(!app.slice(lp,lp+5000).includes('RASSMIY_LEAD_GUARD_V61')){
- const fp=app.indexOf('const f=await form(req);',lp);
+ const parser='const f=formToObject(await req.formData());';
+ const fp=app.indexOf(parser,lp);
  if(fp<0||fp>lp+5000)throw new Error('lead form parser missing');
- const line='const f=await form(req);';
- const guard=`const f=await form(req); // RASSMIY_LEAD_GUARD_V61
+ const line=parser;
+ const guard=`${parser} // RASSMIY_LEAD_GUARD_V61
     if(String(f.website||'').trim()){recordSecurityEvent(state,req,'lead-honeypot','high','bot filled hidden field');await saveState(state);return text('Rejected',400);}
     const cap=await verifyRecaptchaV61(f['g-recaptcha-response']||f.recaptcha_token||'',req);
     if(!cap.ok){recordSecurityEvent(state,req,'recaptcha-failed','medium',cap.reason);await saveState(state);return text('CAPTCHA verification failed',400);}
@@ -52,7 +53,7 @@ if(!app.includes('RASSMIY_ATTACK_GUARD_V61')){
  const guard=`// RASSMIY_ATTACK_GUARD_V61
   const rawUrl=String(req.url||'');
   const attackPattern=/(?:\\.env(?:[/?]|$)|wp-admin|wp-login|phpmyadmin|\\.git(?:[/?]|$)|etc\\/passwd|%2e%2e|\\.\\.\\/|<script|union(?:%20|\\s)+select|information_schema)/i;
-  if(attackPattern.test(rawUrl)){recordSecurityEvent(state,req,'automated-probe','high',rawUrl.slice(0,500));await saveState(state);return text('Forbidden',403,undefined,{'Cache-Control':'no-store'});}
+  if(attackPattern.test(rawUrl)){recordSecurityEvent(state,req,'automated-probe','high',path.slice(0,300));await saveState(state);return text('Forbidden',403,undefined,{'Cache-Control':'no-store'});}
   `;
  app=app.slice(0,hp)+guard+app.slice(hp);
 }
@@ -60,7 +61,7 @@ if(!app.includes('RASSMIY_ATTACK_GUARD_V61')){
 // Authenticated security event feed for the admin UI.
 if(!app.includes("path==='/api/security-events'")){
  const health="if(path==='/api/health')",hp=app.indexOf(health);
- const route=`if(path==='/api/security-events' && req.method==='GET'){if(!session)return text('Unauthorized',401);return text(JSON.stringify({events:(state.security_events||[]).slice(0,200)}),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'});}
+ const route=`if(path==='/api/security-events' && req.method==='GET'){const viewer=decodeSession(state,parseCookies(req).rassmiy_sid);if(!viewer?.userId||currentUser(state,viewer)?.role!=='administrator')return text('Unauthorized',401);return text(JSON.stringify({events:(state.security_events||[]).slice(0,200)}),200,'application/json; charset=utf-8',{'Cache-Control':'no-store'});}
   `;
  app=app.slice(0,hp)+route+app.slice(hp);
 }
@@ -69,13 +70,14 @@ fs.writeFileSync(appFile,app);
 // Add honeypot + optional Google reCAPTCHA widget to every public lead form.
 const siteKey=String(process.env.RECAPTCHA_SITE_KEY||'').trim();
 for(const lang of ['ar','en']){const dir=path.join(root,lang);if(!fs.existsSync(dir))continue;for(const n of fs.readdirSync(dir).filter(x=>x.endsWith('.html'))){const f=path.join(dir,n);let h=fs.readFileSync(f,'utf8');if(!h.includes('action="/api/lead"'))continue;if(!h.includes('name="website"'))h=h.replace(/(<form[^>]+action=["']\/api\/lead["'][^>]*>)/i,'$1<input class="hp-field" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">');if(siteKey&&!h.includes('g-recaptcha')){h=h.replace(/(<\/form>)/i,'<div class="g-recaptcha" data-sitekey="'+siteKey.replace(/"/g,'&quot;')+'"></div>$1');if(!h.includes('recaptcha/api.js'))h=h.replace('</body>','<script src="https://www.google.com/recaptcha/api.js" async defer></script></body>');}fs.writeFileSync(f,h);}}
-let css=fs.readFileSync(path.join(root,'assets/styles.css'),'utf8');if(!css.includes('Rassmiy security v6.1')){css+='\n/* Rassmiy security v6.1 */\n.hp-field{position:absolute!important;left:-10000px!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}.security-event{display:grid;grid-template-columns:150px 110px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid #e5ecf3}.security-high{color:#b42318;font-weight:900}@media(max-width:620px){.security-event{grid-template-columns:1fr}}\n';fs.writeFileSync(path.join(root,'assets/styles.css'),css);}
+let css=fs.readFileSync(path.join(root,'assets/styles.css'),'utf8');if(!css.includes('Rassmiy security v6.1')){css+='\n/* Rassmiy security v6.1 */\n.hp-field{position:absolute!important;inset:0!important;clip-path:inset(50%)!important;overflow:hidden!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important}.security-event{display:grid;grid-template-columns:150px 110px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid #e5ecf3}.security-high{color:#b42318;font-weight:900}@media(max-width:620px){.security-event{grid-template-columns:1fr}}\n';fs.writeFileSync(path.join(root,'assets/styles.css'),css);}
 
 // Admin Attack Record panel.
 let admin=fs.readFileSync(adminJsFile,'utf8');if(!admin.includes('__RASSMIY_SECURITY_ADMIN_V61__'))admin+=`
 ;(()=>{if(window.__RASSMIY_SECURITY_ADMIN_V61__)return;window.__RASSMIY_SECURITY_ADMIN_V61__=true;
+const escapeSecurity=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));
 const ar=()=>document.documentElement.dir==='rtl'||(document.documentElement.lang||'ar').startsWith('ar');
-async function init(){if(!location.pathname.startsWith('/admin'))return;const main=document.querySelector('.cms-main');if(!main||document.querySelector('[data-security-record]'))return;const box=document.createElement('section');box.className='panel';box.setAttribute('data-security-record','');box.innerHTML='<div class="panel-head"><div><h2>'+(ar()?'سجل الهجمات والأمان':'Attack & Security Record')+'</h2><p>'+(ar()?'يسجل محاولات الاستكشاف الآلي وCAPTCHA/Honeypot مع الوقت والمسار وIP.':'Records automated probes and CAPTCHA/honeypot failures with time, path and IP.')+'</p></div><button type="button" class="secondary-btn" data-refresh-security>'+(ar()?'تحديث':'Refresh')+'</button></div><div data-security-list></div>';main.appendChild(box);const load=async()=>{const list=box.querySelector('[data-security-list]');try{const r=await fetch('/api/security-events',{cache:'no-store',credentials:'same-origin'});if(!r.ok){box.remove();return}const d=await r.json(),events=d.events||[];list.innerHTML=events.length?events.map(e=>'<div class="security-event"><span>'+new Date(e.at).toLocaleString()+'</span><span class="security-'+e.severity+'">'+e.severity+'</span><span><b>'+String(e.type||'')+'</b> · '+String(e.ip||'')+' · '+String(e.path||'')+'</span></div>').join(''):'<p class="muted">'+(ar()?'لا توجد أحداث أمنية مسجلة.':'No security events recorded.')+'</p>'}catch{list.innerHTML='<p class="muted">Security log unavailable.</p>'}};box.querySelector('[data-refresh-security]').onclick=load;load()}document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init()})();
+async function init(){if(!location.pathname.startsWith('/admin'))return;const main=document.querySelector('.cms-main');if(!main||document.querySelector('[data-security-record]'))return;const box=document.createElement('section');box.className='panel';box.setAttribute('data-security-record','');box.innerHTML='<div class="panel-head"><div><h2>'+(ar()?'سجل الهجمات والأمان':'Attack & Security Record')+'</h2><p>'+(ar()?'يسجل محاولات الاستكشاف الآلي وCAPTCHA/Honeypot مع الوقت والمسار وIP.':'Records automated probes and CAPTCHA/honeypot failures with time, path and IP.')+'</p></div><button type="button" class="secondary-btn" data-refresh-security>'+(ar()?'تحديث':'Refresh')+'</button></div><div data-security-list></div>';main.appendChild(box);const load=async()=>{const list=box.querySelector('[data-security-list]');try{const r=await fetch('/api/security-events',{cache:'no-store',credentials:'same-origin'});if(!r.ok){box.remove();return}const d=await r.json(),events=d.events||[];list.innerHTML=events.length?events.map(e=>'<div class="security-event"><span>'+new Date(e.at).toLocaleString()+'</span><span class="security-'+escapeSecurity(e.severity)+'">'+escapeSecurity(e.severity)+'</span><span><b>'+escapeSecurity(e.type)+'</b> · '+escapeSecurity(e.ip)+' · '+escapeSecurity(e.path)+'</span></div>').join(''):'<p class="muted">'+(ar()?'لا توجد أحداث أمنية مسجلة.':'No security events recorded.')+'</p>'}catch{list.innerHTML='<p class="muted">Security log unavailable.</p>'}};box.querySelector('[data-refresh-security]').onclick=load;load()}document.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init()})();
 `;fs.writeFileSync(adminJsFile,admin);
 
 // Security manifest for QA/operations.

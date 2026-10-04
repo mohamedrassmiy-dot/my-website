@@ -48,7 +48,7 @@ const cookieJs=String.raw`
     settings:'Cookie settings'
   };
 
-  const read=()=>{try{return JSON.parse(localStorage.getItem(STORAGE)||'null')}catch{return null}};
+  const read=()=>{try{const v=JSON.parse(localStorage.getItem(STORAGE)||'null');return v?.necessary===true&&typeof v.analytics==='boolean'&&Number.isFinite(Date.parse(v.updatedAt))&&Date.now()-Date.parse(v.updatedAt)<31536000000?v:null}catch{return null}};
   const write=(v)=>{try{localStorage.setItem(STORAGE,JSON.stringify(v))}catch{};document.cookie=COOKIE+'='+encodeURIComponent(v.analytics?'analytics':'necessary')+'; Path=/; Max-Age=31536000; SameSite=Lax; Secure';};
   const activate=(category)=>{
     document.querySelectorAll('script[type="text/plain"][data-cookie-category="'+category+'"]').forEach(old=>{
@@ -59,11 +59,11 @@ const cookieJs=String.raw`
     });
   };
   const apply=(v)=>{if(v?.analytics)activate('analytics');window.dispatchEvent(new CustomEvent('rassmiy:consent',{detail:v||{necessary:true,analytics:false}}));};
-  const shell=document.createElement('section'); shell.className='cookie-consent'; shell.setAttribute('role','dialog'); shell.setAttribute('aria-live','polite'); shell.hidden=true;
+  const shell=document.createElement('section'); shell.className='cookie-consent'; shell.setAttribute('role','dialog'); shell.setAttribute('aria-live','polite');shell.setAttribute('aria-label',copy.title); shell.hidden=true;
   shell.innerHTML='<h2>'+copy.title+'</h2><p>'+copy.body+'</p><div class="cookie-preferences" hidden><div class="cookie-choice"><div><span>'+copy.necessary+'</span><small>'+copy.necessaryDesc+'</small></div><input type="checkbox" checked disabled aria-label="'+copy.necessary+'"></div><div class="cookie-choice"><div><span>'+copy.analytics+'</span><small>'+copy.analyticsDesc+'</small></div><input class="cookie-analytics-toggle" type="checkbox" aria-label="'+copy.analytics+'"></div></div><div class="cookie-actions"><button type="button" class="cookie-accept">'+copy.accept+'</button><button type="button" class="cookie-reject">'+copy.reject+'</button><button type="button" class="cookie-prefs">'+copy.prefs+'</button><button type="button" class="cookie-save" hidden>'+copy.save+'</button></div>';
   document.body.appendChild(shell);
   const prefs=shell.querySelector('.cookie-preferences'), toggle=shell.querySelector('.cookie-analytics-toggle'), save=shell.querySelector('.cookie-save');
-  const closeWith=(analytics)=>{const v={necessary:true,analytics:!!analytics,updatedAt:new Date().toISOString()};write(v);apply(v);shell.hidden=true;};
+  const closeWith=(analytics)=>{const previous=read();const v={necessary:true,analytics:!!analytics,updatedAt:new Date().toISOString()};write(v);if(previous?.analytics&&!v.analytics){for(const c of document.cookie.split(';')){const n=c.split('=')[0].trim();if(!/^(_ga(?:_|$)|_gid$|_gat|_gcl_|_fbp$)/.test(n))continue;document.cookie=n+'=; Path=/; Max-Age=0; SameSite=Lax; Secure';for(const domain of [location.hostname,'.'+location.hostname])document.cookie=n+'=; Path=/; Domain='+domain+'; Max-Age=0; SameSite=Lax; Secure';}location.reload();return;}apply(v);shell.hidden=true;};
   shell.querySelector('.cookie-accept').onclick=()=>closeWith(true);
   shell.querySelector('.cookie-reject').onclick=()=>closeWith(false);
   shell.querySelector('.cookie-prefs').onclick=()=>{prefs.hidden=false;save.hidden=false;shell.querySelector('.cookie-prefs').hidden=true};

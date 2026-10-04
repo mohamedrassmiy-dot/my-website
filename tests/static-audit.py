@@ -8,7 +8,7 @@ class Page(HTMLParser):
     def handle_starttag(self, tag, attrs): self.tags.append((tag,dict(attrs)))
 root=Path('release'); checks=0
 for file in root.rglob('*.html'):
-    p=Page();p.feed(file.read_text()); private=file.stem in ['login','dashboard']
+    p=Page();p.feed(file.read_text()); private=any(t=='meta' and a.get('name')=='robots' and 'noindex' in a.get('content','') for t,a in p.tags)
     for name in ['viewport','robots']:
         assert sum(t=='meta' and a.get('name')==name for t,a in p.tags)==1,(file,name)
         checks+=1
@@ -27,6 +27,9 @@ for file in root.rglob('*.html'):
         assert target.exists() or dynamic,(file,value);checks+=1
         if tag=='img': assert 'alt' in a,(file,'alt');checks+=1
 for lang in ['ar','en']:
+    home=(root/lang/'index.html').read_text()
+    assert '+215%' not in home and '+340%' not in home,(lang,'unverified metrics');checks+=1
+    assert home.count('/articles/')>=6,(lang,'real article destinations');checks+=1
     text=(root/lang/'portfolio.html').read_text()
     assert text.count('class="work-card"')==6;checks+=1
     assert 'href="/'+('en' if lang=='ar' else 'ar')+'/portfolio.html"' in text;checks+=1
