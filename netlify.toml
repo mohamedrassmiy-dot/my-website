@@ -1,9 +1,16 @@
 [build]
-  command = "rm -rf release && mkdir release && unzip -q site.zip -d release && mkdir -p release/netlify/functions release/assets && cat cms-v4/app.part00 cms-v4/app.part01 cms-v4/app.part02 cms-v4/app.part03 | base64 -d | gunzip > release/netlify/functions/app.mjs && base64 -d cms-v4/admin.css.b64 | gunzip > release/assets/admin.css && base64 -d cms-v4/admin.js.b64 | gunzip > release/assets/admin.js && cd release && npm install --no-audit --no-fund"
+  command = "rm -rf release && mkdir release && unzip -q site.zip -d release && rm -f release/netlify.toml release/_redirects && mkdir -p release/netlify/functions release/assets && cat cms-v4/app.part00 cms-v4/app.part01 cms-v4/app.part02 cms-v4/app.part03 | base64 -d | gunzip > release/netlify/functions/app.mjs && node cms-v4/fix-admin-redirect-loop.mjs release/netlify/functions/app.mjs && base64 -d cms-v4/admin.css.b64 | gunzip > release/assets/admin.css && base64 -d cms-v4/admin.js.b64 | gunzip > release/assets/admin.js && cd release && npm install --no-audit --no-fund"
   publish = "release"
   functions = "release/netlify/functions"
 
 [build.environment]
   NODE_VERSION = "22"
 
-# Production trigger: Rassmiy CMS backend v4.2
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "SAMEORIGIN"
+
+# Hotfix: remove /admin <-> /admin/ redirect loop
