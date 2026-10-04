@@ -1,0 +1,3 @@
+Rassmiy CMS bilingual backend release trigger
+AR/EN editor + AR/EN SEO + dual slugs + edit existing content
+Source main base: ef4313749de960c400001d64f36bf057a1c17684
