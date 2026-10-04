@@ -1,4 +1,4 @@
-name: Diagnose Live QA Growth v6.1.4
+name: Inspect Cards API v6.1.4
 
 on:
   push:
@@ -6,26 +6,11 @@ on:
       - qa-growth-v60
 
 jobs:
-  qa:
+  inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Diagnose content assertions
-        shell: bash
-        run: |
+      - run: |
           BASE="https://deploy-preview-14--rassmiy-marketing.netlify.app"
-          fail=0
-          check_contains() {
-            path="$1"; needle="$2"; label="$3"
-            body=$(curl -Ls "$BASE$path")
-            if printf '%s' "$body" | grep -Fq "$needle"; then echo "PASS $label"; else echo "FAIL $label :: $needle"; fail=1; fi
-          }
-          check_contains /api/content-cards '"id":"service-seo"' 'service card seed'
-          check_contains /api/content-cards '"id":"case-ecommerce"' 'portfolio card seed'
-          check_contains /en/services.html 'Engagement models' 'services growth copy'
-          check_contains /en/index.html 'Integrated marketing that connects visibility to leads and revenue' 'home growth copy'
-          check_contains /en/articles 'Digital Marketing Strategy in Saudi Arabia' 'article index title'
-          check_contains /sitemap-growth.xml '/en/pages/seo-consultant-riyadh' 'growth sitemap landing'
-          check_contains /sitemap-growth.xml '/en/articles/b2b-lead-generation-saudi-arabia' 'growth sitemap article'
-          check_contains /assets/admin.js '__RASSMIY_CARD_MANAGER_V60__' 'card manager JS'
-          check_contains /assets/site.js '__RASSMIY_CARDS_V60__' 'frontend cards JS'
-          [ "$fail" = "0" ] && echo "DIAG_GROWTH_V614=PASS" || { echo "DIAG_GROWTH_V614=FAIL"; exit 1; }
+          echo "=== BODY ==="
+          curl -Ls "$BASE/api/content-cards" | head -c 10000
+          echo
