@@ -1,4 +1,4 @@
-name: Live QA v5.3
+name: Live QA v5.4
 
 on:
   push:
@@ -9,35 +9,23 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify preview pages and click targets
+      - name: Verify preview v5.4
         shell: bash
         run: |
-          set -u
-          BASE="https://deploy-preview-8--rassmiy-marketing.netlify.app"
-          fail=0
-          check_page() {
-            local path="$1"
+          set -euo pipefail
+          BASE="https://deploy-preview-9--rassmiy-marketing.netlify.app"
+          for path in / /ar/services.html /en/services.html /ar/portfolio.html /en/portfolio.html /ar/contact.html /en/contact.html /robots.txt /sitemap.xml /admin /assets/site.js; do
             code=$(curl -L -s -o /tmp/page -w "%{http_code}" "$BASE$path")
-            echo "HTTP $path -> $code"
-            [ "$code" = "200" ] || fail=1
-          }
-          check_contains() {
-            local path="$1"; local needle="$2"; local label="$3"
-            body=$(curl -Ls "$BASE$path")
-            if printf '%s' "$body" | grep -Fq "$needle"; then
-              echo "PASS $label"
-            else
-              echo "FAIL $label"
-              echo "Needle: $needle"
-              printf '%s' "$body" | grep -Eo 'href="[^"]+"|data-card-link="[^"]+"' | head -80 || true
-              fail=1
-            fi
-          }
-          for path in / /ar/services.html /en/services.html /ar/portfolio.html /en/portfolio.html /ar/contact.html /en/contact.html /robots.txt /sitemap.xml /admin; do check_page "$path"; done
-          check_contains /ar/services.html 'contact.html?service=seo-aeo' 'AR service CTA'
-          check_contains /en/services.html 'contact.html?service=seo-aeo' 'EN service CTA'
-          check_contains /ar/portfolio.html 'contact.html?project=ecommerce-store' 'AR portfolio CTA'
-          check_contains /ar/contact.html 'wa.me/966536741442' 'WhatsApp contact'
-          check_contains /ar/contact.html 'linkedin.com/company/rassmiy-marketing/' 'Company LinkedIn'
-          check_contains /assets/site.js '__RASSMIY_CLICKS_V53__' 'click JS'
-          [ "$fail" = "0" ] && echo "LIVE_QA_V53=PASS" || { echo "LIVE_QA_V53=FAIL"; exit 1; }
+            echo "$path -> $code"
+            test "$code" = "200"
+          done
+          curl -Ls "$BASE/ar/services.html" | grep -Fq 'contact.html?service=seo-aeo'
+          curl -Ls "$BASE/en/services.html" | grep -Fq 'contact.html?service=seo-aeo'
+          curl -Ls "$BASE/ar/portfolio.html" | grep -Fq 'wa.me/966536741442'
+          curl -Ls "$BASE/ar/contact.html" | grep -Fq 'mailto:mohamed.rassmiy@gmail.com'
+          curl -Ls "$BASE/ar/contact.html" | grep -Fq 'linkedin.com/company/rassmiy-marketing/'
+          curl -Ls "$BASE/ar/contact.html" | grep -Fq 'wa.me/966536741442'
+          js=$(curl -Ls "$BASE/assets/site.js")
+          printf '%s' "$js" | grep -Fq '__RASSMIY_CLICKS_V53__'
+          printf '%s' "$js" | grep -Fq ".service-card,.case-card,[data-card-link]"
+          echo "LIVE_QA_V54=PASS"
