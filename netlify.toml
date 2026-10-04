@@ -6,4 +6,4 @@
 [build.environment]
   NODE_VERSION = "22"
 
-# CMS Pro v4 deployment trigger
+# Recovery deploy after admin regression
