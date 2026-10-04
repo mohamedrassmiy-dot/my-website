@@ -218,7 +218,7 @@ if(fs.existsSync(arHome)){
 
 // Portfolio and contact refresh — sourced from Mohamed's supplied CV.
 const socialPersonal='https://www.linkedin.com/in/mohamedrassmiy';
-const socialBrand='https://www.linkedin.com/posts/rassmiy-marketing_rassmiymarketing-seo-aesaevaebaeyaeuabraetaevaezaeraepaesabraepaesaeqaevaet-activity-7511335677968703488-rR74?utm_source=share&utm_medium=member_ios&rcm=ACoAADX1g_EBa1ytxUmm3xI9QE0F-90xrU5giwQ';
+const socialBrand='https://www.linkedin.com/company/rassmiy-marketing/';
 const whatsapp='https://wa.me/966536741442';
 const projects=[
  {id:'ecommerce',tag:'E-COMMERCE',ar:['تطوير تجربة التجارة الإلكترونية','شركة المستقبل لمواد البناء','إدارة تطوير المتجر والموقع، وتنظيم عرض المنتجات والمحتوى ومسار العميل، بالتنسيق مع فرق المبيعات والمنتجات والعمليات.','تخطيط رحلة العميل وتحسين تجربة التصفح|تحسين عرض المنتجات ووصفها وظهورها في البحث|مواءمة المتجر مع الحملات والتنسيق التشغيلي','تجربة متجر تدعم اكتشاف المنتجات وتسهّل الانتقال إلى الاستفسار والشراء.'],en:['E-commerce experience development','Al Mustaqbal Building Materials Company','Managed store and website development, product presentation, content and the customer journey in collaboration with sales, product and operations teams.','Customer journey and browsing experience planning|Product merchandising, content and search visibility|Campaign alignment and operational coordination','A store experience designed to support product discovery, enquiries and purchasing.']},
