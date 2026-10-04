@@ -13,4 +13,4 @@
     Referrer-Policy = "strict-origin-when-cross-origin"
     X-Frame-Options = "SAMEORIGIN"
 
-# Production trigger: admin RTL layout hotfix v4.2.2
+# Force production: admin RTL layout hotfix v4.2.2
