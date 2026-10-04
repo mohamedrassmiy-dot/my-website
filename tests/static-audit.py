@@ -8,7 +8,7 @@ class Page(HTMLParser):
     def handle_starttag(self, tag, attrs): self.tags.append((tag,dict(attrs)))
 root=Path('release'); checks=0
 for file in root.rglob('*.html'):
-    p=Page();p.feed(file.read_text()); private=file.stem in ['login','dashboard']
+    p=Page();p.feed(file.read_text()); private=any(t=='meta' and a.get('name')=='robots' and 'noindex' in a.get('content','') for t,a in p.tags)
     for name in ['viewport','robots']:
         assert sum(t=='meta' and a.get('name')==name for t,a in p.tags)==1,(file,name)
         checks+=1

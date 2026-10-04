@@ -2,9 +2,11 @@ import fs from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
+// Tests never use deployed CAPTCHA or encryption secrets.
+delete process.env.RECAPTCHA_SECRET_KEY;delete process.env.DATA_ENCRYPTION_KEY;
 const tmp=await fs.mkdtemp(path.join(os.tmpdir(),'rassmiy-qa-'));
 const source=await fs.readFile('release/netlify/functions/app.mjs','utf8');
-await fs.writeFile(path.join(tmp,'app.mjs'),source.replace("import { getStore, getDeployStore } from '@netlify/blobs';",`const stores=new Map();function getStore(name){if(!stores.has(name))stores.set(name,new Map());const data=stores.get(name);return {get:async key=>structuredClone(data.get(key)??null),setJSON:async(key,value)=>data.set(key,structuredClone(value)),set:async(key,value)=>data.set(key,value),delete:async key=>data.delete(key)}} const getDeployStore=getStore;`));
+await fs.writeFile(path.join(tmp,'app.mjs'),source.replace("import sanitizeHtml from 'sanitize-html';",`import sanitizeHtml from '${import.meta.resolve('sanitize-html')}';`).replace("import { getStore, getDeployStore } from '@netlify/blobs';",`const stores=new Map();function getStore(name){if(!stores.has(name))stores.set(name,new Map());const data=stores.get(name);return {get:async key=>structuredClone(data.get(key)??null),setJSON:async(key,value)=>data.set(key,structuredClone(value)),set:async(key,value)=>data.set(key,value),delete:async key=>data.delete(key)}} const getDeployStore=getStore;`));
 const {default:handler}=await import(path.join(tmp,'app.mjs'));
 let cookie='',checks=0;
 function ok(value,message){assert.ok(value,message);checks++;}
@@ -44,5 +46,26 @@ for(const [mime,expectError] of [['image/png',false],['text/plain',true]]){const
 r=await request('/admin?section=media');const mediaPath=r.text.match(/src="(\/media\/[^"]+)"/)?.[1];ok(Boolean(mediaPath),'uploaded media listed');r=await request(mediaPath);ok(r.res.status===200&&r.res.headers.get('content-type')==='image/png','media retrieval');
 r=await request('/admin/action',{csrf,action:'add_user',name:'QA Sales',email:'sales@example.test',password:'Local-QA-password-456',role:'sales'});ok(!r.res.headers.get('location').includes('error'),'local sales role created');
 const adminCookie=cookie;cookie='';r=await request('/admin/login');const salesCsrf=token(r.text);r=await request('/admin/login',{csrf:salesCsrf,email:'sales@example.test',password:'Local-QA-password-456'});ok(r.res.headers.get('location')==='/admin','local sales login');r=await request('/admin?section=leads');ok(r.res.status===200,'sales sees leads');const salesActionToken=token(r.text);r=await request('/admin/action',{...page,csrf:salesActionToken});ok(r.res.headers.get('location').includes('error'),'sales cannot edit pages');cookie=adminCookie;
+// Non-destructive penetration checks against a disposable store.
+const originalCookie=cookie;
+r=await request('/admin/logout',{});ok(r.res.status===419,'logout CSRF rejected');
+cookie='rassmiy_sid=forged.invalid';r=await request('/admin');ok([302,303].includes(r.res.status),'forged session denied');cookie=originalCookie;
+cookie=originalCookie+'; broken=%E0%A4';r=await request('/admin');ok(r.res.status===200,'malformed cookie cannot crash CMS');cookie=originalCookie;
+r=await request('/api/security-events',null,false);ok(r.res.status===401,'anonymous attack log denied');
+r=await request('/.env');ok(r.res.status===403,'environment probe blocked');r=await request('/api/security-events');ok(r.res.status===200&&JSON.parse(r.text).events.length>0,'administrator reads attack log');
+r=await request('/api/lead',{name:'Bot',website:'spam'},false);ok(r.res.status===400,'honeypot blocked');
+r=await request('/api/lead',{name:'Test',email:'bad'},false);ok(r.res.status===400,'invalid email blocked');
+r=await request('/api/lead',{name:'Test',message:'x'.repeat(10001)},false);ok(r.res.status===400,'oversized lead blocked');
+r=await request('/admin/action',{csrf,action:'save_cards',cards_json:JSON.stringify([{id:'evil',cta_url_en:'javascript:alert(1)'}])});ok(r.res.headers.get('location').includes('error'),'stored card script URL rejected');
+r=await request('/admin/action',{csrf,action:'save_redirect',from:'/unsafe',to:'javascript:alert(1)',status:'301'});ok(r.res.headers.get('location').includes('error'),'script redirect rejected');
+r=await request('/admin/action',{...page,slug_ar:'security-ar',slug_en:'security-en',status:'published',content_en:'<p>Safe</p><script>alert(1)</script><img src="x" onerror="alert(1)"><a href="javascript:alert(1)">link</a>'});ok(!r.res.headers.get('location').includes('error'),'safe rich content stored');r=await request('/en/pages/security-en');ok(r.res.status===200&&!r.text.includes('alert(1)')&&!r.text.includes('onerror='),'stored XSS stripped');
+const api=await request('/api/content-cards');ok(api.res.status===200&&JSON.parse(api.text).cards.length>=13,'public card fallback');
+// Use a synthetic environment key only inside this process; inspect the raw mock persistence.
+process.env.DATA_ENCRYPTION_KEY='Synthetic-QA-Key-Only-Not-A-Production-Secret';
+r=await request('/api/lead',{name:'Encrypted QA',email:'encrypted@example.test',message:'Test encryption'},false);ok([302,303].includes(r.res.status),'encrypted lead save');
+r=await request('/admin?section=leads');ok(r.res.status===200&&r.text.includes('Encrypted QA'),'encrypted lead read');
+process.env.DATA_ENCRYPTION_KEY='Wrong-QA-key';r=await request('/admin');ok(r.res.status===500,'wrong encryption key fails closed');
+process.env.DATA_ENCRYPTION_KEY='Synthetic-QA-Key-Only-Not-A-Production-Secret';r=await request('/admin?section=leads');ok(r.res.status===200&&r.text.includes('Encrypted QA'),'wrong key did not overwrite data');
+delete process.env.DATA_ENCRYPTION_KEY;
 await fs.rm(tmp,{recursive:true,force:true});
 console.log(JSON.stringify({passed:checks,environment:'isolated in-memory store; no live accounts or leads changed'}));
