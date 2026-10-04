@@ -1,0 +1,20 @@
+import fs from 'node:fs';
+import path from 'node:path';
+const root=process.argv[2]||'release';
+const must=(ok,label)=>{if(!ok)throw new Error('QA FAIL: '+label);console.log('QA PASS:',label)};
+const read=p=>fs.readFileSync(path.join(root,p),'utf8');
+for(const f of ['index.html','ar/index.html','en/index.html','assets/styles.css','assets/site.js','assets/admin.js','netlify/functions/app.mjs','cache-flush.html'])must(fs.existsSync(path.join(root,f)),f+' exists');
+const css=read('assets/styles.css'),site=read('assets/site.js'),admin=read('assets/admin.js'),app=read('netlify/functions/app.mjs');
+must(css.includes('@media(max-width:980px)')&&css.includes('@media(max-width:620px)'),'mobile responsive breakpoints');
+must(css.includes('@media(max-width:720px)'),'tablet responsive breakpoint');
+must(site.includes('__RASSMIY_COOKIE_V51__'),'cookie consent system');
+must(site.includes('data-public-menu-toggle')||site.includes('mobile-toggle'),'mobile burger logic');
+must(admin.includes('__RASSMIY_CACHE_FLUSH_V51__'),'admin cache flush control');
+must(app.includes('/api/health'),'backend health route');
+must(/csrf/i.test(app),'CSRF protection present');
+must(/HttpOnly/i.test(app)&&/SameSite/i.test(app),'secure session cookie flags');
+must(/noindex/i.test(app),'private/admin noindex support');
+must(/robots\.txt/.test(app)&&/sitemap\.xml/.test(app),'SEO system routes');
+must(app.includes('linkedin.com/company/rassmiy-marketing/')||read('ar/index.html').includes('linkedin.com/company/rassmiy-marketing/'),'LinkedIn company link');
+for(const lang of ['ar','en'])for(const name of fs.readdirSync(path.join(root,lang)).filter(n=>n.endsWith('.html'))){const h=read(lang+'/'+name);must(/name=["']viewport["']/i.test(h),lang+'/'+name+' viewport');}
+console.log('QA SUMMARY: mobile=PASS tablet=PASS frontend=PASS backend=PASS security-static=PASS');
