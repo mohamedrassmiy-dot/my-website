@@ -11,7 +11,10 @@ replace('<small>© 2026 Rassmiy Marketing</small>',socials+'<small>© 2026 Rassm
 replace('</div></div></footer>`; }','</div></div></footer><a class="whatsapp-floating" href="https://wa.me/966536741442" target="_blank" rel="noopener noreferrer">${ar?\'واتساب\':\'WhatsApp\'}</a>`; }');
 // Real BOM/newlines and formula-safe cells for spreadsheet exports.
 replace("function csvCell(v=''){ return `\"${String(v??'').replaceAll('\"','\"\"')}\"`; }", "function csvCell(v=''){ let value=String(v??''); if(/^[\\s]*[=+@-]/.test(value)) value=\"'\"+value; return `\"${value.replaceAll('\"','\"\"')}\"`; }");
+replace("  if(path==='/api/health')", "  if(/^\\/(ar|en)\\/articles\\.html$/.test(path)) return saveAnd(redirect(path.replace('.html',''),301));\n  if(path==='/api/health')");
 fs.writeFileSync(file,s);
+// Clean URLs must reach the CMS index, instead of shadowing it with the ZIP's sample listings.
+for(const lang of ['ar','en'])fs.rmSync(`${root}/${lang}/articles.html`,{force:true});
 let js=fs.readFileSync(`${root}/assets/site.js`,'utf8');
 js+=`\n(()=>{if(new URLSearchParams(location.search).get('sent')!=='1')return;const form=document.querySelector('form[action="/api/lead"]');if(!form)return;const note=document.createElement('p');note.setAttribute('role','status');note.className='contact-success';note.textContent=document.documentElement.lang==='ar'?'تم إرسال طلبك بنجاح. شكرًا لتواصلك.':'Your request was sent successfully. Thank you for getting in touch.';form.prepend(note);})();\n`;
 fs.writeFileSync(`${root}/assets/site.js`,js);

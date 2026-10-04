@@ -36,6 +36,7 @@ r=await request('/api/lead',{name:'=1+1',email:'qa@example.test',message:'Local 
 r=await request('/admin/export/leads.csv');ok(r.res.status===200&&r.text.includes("'=1+1"),'CSV formula safe');ok(r.text.includes('\r\n'),'CSV line endings');
 r=await request('/admin/action',{csrf,action:'save_redirect',from:'/old',to:'/en/contact.html',status:'301',enabled:'1'});ok([302,303].includes(r.res.status),'redirect creation');r=await request('/old');ok(r.res.status===301&&r.res.headers.get('location')==='/en/contact.html','redirect applied');
 r=await request('/robots.txt');ok(r.text.includes('Sitemap: https://example.test/sitemap.xml'),'robots sitemap absolute');
+r=await request('/ar/articles.html');ok(r.res.status===301&&r.res.headers.get('location')==='/ar/articles','legacy article index alias');
 r=await request('/unknown');ok(r.res.status===404,'unknown route');
 // Upload a tiny PNG into the isolated store, then retrieve it and reject an unsupported file.
 const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/l9sAAAAASUVORK5CYII=','base64');
