@@ -7,7 +7,7 @@ const stylesPath = path.join(root,'assets','styles.css');
 const jsPath = path.join(root,'assets','site.js');
 
 const mobileCss = String.raw`
-/* Rassmiy public responsive navigation v4.9 */
+/* Rassmiy public responsive navigation v5.0 */
 html,body{max-width:100%;overflow-x:clip}
 body{min-width:0}
 .container{max-width:1180px}
@@ -96,7 +96,7 @@ body{min-width:0}
 `;
 let styles = fs.readFileSync(stylesPath,'utf8');
 styles = styles.replace(/\/\* Rassmiy public mobile navigation v4\.6 \*\/[\s\S]*?(?=\/\* Rassmiy public responsive navigation v4\.7 \*\/|$)/,'');
-if(!styles.includes('Rassmiy public responsive navigation v4.9')) styles += '\n'+mobileCss+'\n';
+if(!styles.includes('Rassmiy public responsive navigation v5.0')) styles += '\n'+mobileCss+'\n';
 fs.writeFileSync(stylesPath,styles);
 
 const js = String.raw`(()=>{
@@ -175,11 +175,16 @@ function injectSeo(file,lang,name){
   let pathName=`/${lang}/${name}`;
   let counterpart=`/${counterpartLang}/${name}`;
   if(lower==='articles.html'){ pathName=`/${lang}/articles`; counterpart=`/${counterpartLang}/articles`; }
+  if(lower==='index.html' && lang==='ar'){ pathName='/'; counterpart='/en/index.html'; }
+  if(lower==='index.html' && lang==='en'){ counterpart='/'; }
   const canonical=base+pathName;
   const altOther=base+counterpart;
   const altSame=canonical;
-  const xDefault=lang==='en'?canonical:altOther;
+  const xDefault=lower==='index.html'?base+'/':(lang==='en'?canonical:altOther);
   html=html.replace(/<link\s+rel=["']canonical["'][^>]*>/gi,'');
+  html=html.replace(/<link\s+rel=["']alternate["'][^>]*>/gi,'');
+  html=html.replace(/<meta\s+property=["']og:url["'][^>]*>/gi,'');
+  html=html.replace(/<meta\s+property=["']og:locale(?::alternate)?["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+name=[#']robots["'][^>]*>/gi,'');
   html=html.replace(/<meta\s+name=[#']googlebot["'][^>]*>/gi,'');
   const robots=isPrivate?'noindex,nofollow':'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
@@ -195,8 +200,18 @@ for(const lang of ['ar','en']){
 }
 
 const rootIndex=path.join(root,'index.html');
-if(fs.existsSync(rootIndex)){
-  let h=fs.readFileSync(rootIndex,'utf8');
-  if(!/name=["']robots["']/i.test(h)) h=h.replace(/<head>/i,'<head><meta name="robots" content="noindex,follow"><link rel="canonical" href="'+base+'/en/index.html">');
+const arHome=path.join(root,'ar','index.html');
+if(fs.existsSync(arHome)){
+  let h=fs.readFileSync(arHome,'utf8');
+  h=h
+    .replaceAll('../assets/','/assets/')
+    .replace(/href="\.\.\/en\/index\.html"/g,'href="/en/index.html"')
+    .replace(/href="index\.html"/g,'href="/"')
+    .replace(/href="about\.html"/g,'href="/ar/about.html"')
+    .replace(/href="services\.html"/g,'href="/ar/services.html"')
+    .replace(/href="portfolio\.html"/g,'href="/ar/portfolio.html"')
+    .replace(/href="contact\.html"/g,'href="/ar/contact.html"')
+    .replace(/href="article-seo\.html"/g,'href="/ar/article-seo.html"');
+  h=h.replace(/<meta\s+http-equiv=["']refresh["'][^>]*>/gi,'');
   fs.writeFileSync(rootIndex,h);
 }
