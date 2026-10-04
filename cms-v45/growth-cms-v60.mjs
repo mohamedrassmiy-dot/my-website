@@ -184,11 +184,6 @@ if(!app.includes("path==='/api/content-cards'")){
 }
 
 
-if(app.includes("const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const homeAlts=")){
- app=app.replace("const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const homeAlts=",
- "const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc,lastmod,priority,changefreq,alts}); const growthStatic=[...RASSMIY_SEED_PAGES_V60.flatMap(p=>['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/pages/'+encodeURIComponent(lang==='ar'?p.slug_ar:p.slug_en)}))),...['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/articles'})),...RASSMIY_SEED_ARTICLES_V60.flatMap(a=>['ar','en'].map(lang=>({lang,href:base+'/'+lang+'/articles/'+encodeURIComponent(lang==='ar'?a.slug_ar:a.slug_en)})))]; for(const x of growthStatic)add(x.href,'','0.8','weekly',[]); const homeAlts=");
-}
-// GROWTH_SITEMAP_V61
 
 fs.writeFileSync(appFile,app);
 
@@ -405,5 +400,8 @@ for(const p of PAGES)for(const lang of ['ar','en'])growthUrls.push(siteBase+'/'+
 growthUrls.push(siteBase+'/ar/articles',siteBase+'/en/articles');
 for(const a of ARTICLES)for(const lang of ['ar','en'])growthUrls.push(siteBase+'/'+lang+'/articles/'+encodeURIComponent(lang==='ar'?a.slug_ar:a.slug_en));
 fs.writeFileSync(path.join(root,'growth-urls-v61.json'),JSON.stringify(growthUrls,null,2));
+const growthXml='<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'+growthUrls.map(u=>'<url><loc>'+u.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>').join('\n')+'\n</urlset>';
+fs.writeFileSync(path.join(root,'sitemap-growth.xml'),growthXml);
+
 
 fs.writeFileSync(path.join(root,'growth-v60.json'),JSON.stringify({cards:CARDS,pages:PAGES.map(x=>x.id),articles:ARTICLES.map(x=>x.id)},null,2));
