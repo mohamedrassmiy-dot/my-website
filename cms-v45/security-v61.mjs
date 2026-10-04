@@ -26,7 +26,7 @@ async function verifyRecaptchaV61(token,req){
  try{const body=new URLSearchParams({secret,response:String(token),remoteip:securityIp(req)});const r=await fetch('https://www.google.com/recaptcha/api/siteverify',{method:'POST',headers:{'content-type':'application/x-www-form-urlencoded'},body});const j=await r.json();return {ok:!!j.success,reason:j['error-codes']?.join(',')||''};}catch{return {ok:false,reason:'verification-error'};}
 }
 `;
- app=hasAnchor?app.replace(anchor,helper+anchor):app+'\\n'+helper;
+ app=hasAnchor?app.replace(anchor,helper+anchor):app+String.fromCharCode(10)+helper;
 }
 
 // Harden lead endpoint without consuming the request twice: inject checks immediately after its existing form parser.
