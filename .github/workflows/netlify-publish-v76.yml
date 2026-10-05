@@ -1,0 +1,12 @@
+name: Publish Rassmiy Production v7.6
+on:
+  push:
+    branches: [publish-v76-production]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish verified build to Netlify production
+        run: npx -y @netlify/mcp@latest --site-id dbf13d3b-88e6-4396-ae96-4adb2ab937a8 --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..mUi94PkRFKitFuXt.G9X3LrzjAnuG6Bmd_4isyb16xI92x5iVCbaUEuuU4o5jyAQCq2qaQnTt5soKEiuXrepdfnjvJtIXbYv505AbtPUUdCRMy6WzlmEc1FD1xkxdD53GodR1_0MOg0i_G29cvoKI9M0T23G6N-cmoSYsfsaSJL0zrGGkUyqVI6ith75_4vCV47mV9wrHogGlIRMkU5ZxgovNSm-jv2enn7OlxtVVa_hspUuuWYOHBpABjVNHkAclcIGdWor_6uJM16P0bNWJEyZ6XAn3jVA_JTc7klqv_cTYvM_5NymDQyJZ9U961reJ7unz-X4UFTmal8rbes6lJYxdC3zRjKdzMwjbKHyztpc2kz4UIpgjZIY_YGr-oD7MP6sJidph-iEEptDHaO8XQwhs.lKayrCTWq6yl1K0pW4jIlg" --no-wait
