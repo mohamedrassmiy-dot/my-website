@@ -16,9 +16,9 @@ let r=await request('/api/health');ok(r.res.status===200&&JSON.parse(r.text).ins
 r=await request('/admin',null,false);ok([302,303].includes(r.res.status),'anonymous dashboard denied');
 r=await request('/install');let csrf=token(r.text);ok(Boolean(csrf),'install csrf');
 r=await request('/install',{csrf,name:'QA Administrator',email:'qa@example.test',password:'Local-QA-password-123',confirm_password:'Local-QA-password-123'});ok([302,303].includes(r.res.status),'install');
-r=await request('/admin/login');csrf=token(r.text);
-r=await request('/admin/login',{email:'qa@example.test',password:'Local-QA-password-123'});ok(r.res.status===419,'login rejects missing csrf');
-r=await request('/admin/login',{csrf,email:'qa@example.test',password:'Local-QA-password-123'});ok([302,303].includes(r.res.status)&&r.res.headers.get('location')==='/admin','login');
+r=await request('/admin');csrf=token(r.text);
+r=await request('/admin',{email:'qa@example.test',password:'Local-QA-password-123'});ok(r.res.status===419,'login rejects missing csrf');
+r=await request('/admin',{csrf,email:'qa@example.test',password:'Local-QA-password-123'});ok([302,303].includes(r.res.status)&&r.res.headers.get('location')==='/admin','login');
 for(const section of ['dashboard','pages','articles','media','leads','seo','redirects','robots','users','activity','settings','security']){r=await request('/admin?section='+section);ok(r.res.status===200&&!r.text.includes('<title>CMS Error'),'section '+section);ok(r.res.headers.get('x-robots-tag')==='noindex, nofollow','private SEO '+section);csrf=token(r.text)||csrf;}
 r=await request('/admin/action',{action:'save_page'});ok(r.res.status===419,'mutations require csrf');
 const page={csrf,action:'save_page',title_ar:'اختبار الصفحة',title_en:'Test Page',slug_ar:'test-ar',slug_en:'test-en',content_ar:'<p>محتوى تجريبي</p>',content_en:'<p>Test content</p>',status:'draft',robots_index:'1',robots_follow:'1'};
@@ -45,11 +45,11 @@ const png=Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42
 for(const [mime,expectError] of [['image/png',false],['text/plain',true]]){const fd=new FormData();fd.set('csrf',csrf);fd.set('file',new File([png],'qa.png',{type:mime}));const res=await handler(new Request('https://example.test/admin/media/upload',{method:'POST',headers:{cookie},body:fd}));ok(res.headers.get('location').includes('error')===expectError,'media validation '+mime);}
 r=await request('/admin?section=media');const mediaPath=r.text.match(/src="(\/media\/[^"]+)"/)?.[1];ok(Boolean(mediaPath),'uploaded media listed');r=await request(mediaPath);ok(r.res.status===200&&r.res.headers.get('content-type')==='image/png','media retrieval');
 r=await request('/admin/action',{csrf,action:'add_user',name:'QA Sales',email:'sales@example.test',password:'Local-QA-password-456',role:'sales'});ok(!r.res.headers.get('location').includes('error'),'local sales role created');
-const adminCookie=cookie;cookie='';r=await request('/admin/login');const salesCsrf=token(r.text);r=await request('/admin/login',{csrf:salesCsrf,email:'sales@example.test',password:'Local-QA-password-456'});ok(r.res.headers.get('location')==='/admin','local sales login');r=await request('/admin?section=leads');ok(r.res.status===200,'sales sees leads');const salesActionToken=token(r.text);r=await request('/admin/action',{...page,csrf:salesActionToken});ok(r.res.headers.get('location').includes('error'),'sales cannot edit pages');cookie=adminCookie;
+const adminCookie=cookie;cookie='';r=await request('/admin');const salesCsrf=token(r.text);r=await request('/admin',{csrf:salesCsrf,email:'sales@example.test',password:'Local-QA-password-456'});ok(r.res.headers.get('location')==='/admin','local sales login');r=await request('/admin?section=leads');ok(r.res.status===200,'sales sees leads');const salesActionToken=token(r.text);r=await request('/admin/action',{...page,csrf:salesActionToken});ok(r.res.headers.get('location').includes('error'),'sales cannot edit pages');cookie=adminCookie;
 // Non-destructive penetration checks against a disposable store.
 const originalCookie=cookie;
 r=await request('/admin/logout',{});ok(r.res.status===419,'logout CSRF rejected');
-cookie='rassmiy_sid=forged.invalid';r=await request('/admin');ok([302,303].includes(r.res.status),'forged session denied');cookie=originalCookie;
+cookie='rassmiy_sid=forged.invalid';r=await request('/admin');ok(r.res.status===200&&Boolean(token(r.text)),'forged session denied with login screen');cookie=originalCookie;
 cookie=originalCookie+'; broken=%E0%A4';r=await request('/admin');ok(r.res.status===200,'malformed cookie cannot crash CMS');cookie=originalCookie;
 r=await request('/api/security-events',null,false);ok(r.res.status===401,'anonymous attack log denied');
 r=await request('/.env');ok(r.res.status===403,'environment probe blocked');r=await request('/api/security-events');ok(r.res.status===200&&JSON.parse(r.text).events.length>0,'administrator reads attack log');
