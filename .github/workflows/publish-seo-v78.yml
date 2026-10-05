@@ -1,0 +1,12 @@
+name: Publish SEO Demand v7.8 Production
+on:
+  push:
+    branches: [publish-seo-v78-production]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish verified main to Netlify
+        run: npx -y @netlify/mcp@latest --site-id dbf13d3b-88e6-4396-ae96-4adb2ab937a8 --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..geTidWojFZdDfTHv.r1fLmr02F9wsnBZYHZmNr8hSAOKwMyUkrujrifpCHJVfvQWzFlROp8hRZWyWGnX1n9uoWYaL2iMvMafBhSNLg4hbyDJ8iyLzihCaWCruO1vH6CDInu4WjL6A-FX0vGHqx3gcmat9LhFBNrIwBI6hhmAr97HouTksSnZdYggdLz6iFHh-L_7UlvAHmQDqM1sIgNr09Fy6hLIg7M7klhhCaZi5ZY46AHMulTE3pr3015X3QKGwZLe_hZsc1ThzaJrNFHIgyRfRepZY0PLLVZ8RNUD-9Gfdcg8gh7Yo1G0s_JKu7Ze_qhrKxiWT3ybbz7yuqOSVpiJ8BnZF5vSbvNWO7eiQ9weRhJKmxv4lBnq_ap51GUmsnSRcFMoRY-wF-stsj7XGTbV6.Q5LelJTPrdBI4aq3AXhPiA" --no-wait
