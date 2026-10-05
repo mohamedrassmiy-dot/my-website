@@ -19,14 +19,17 @@ jobs:
             ! grep -q "ERR_REQUIRE_ESM" /tmp/body
             ! grep -q "MODULE_NOT_FOUND" /tmp/body
           done
-          HOME=$(curl -LsS "$BASE/")
-          ADMIN=$(curl -LsS "$BASE/admin")
-          SITEJS=$(curl -LsS "$BASE/assets/site.js")
-          ! printf '%s' "$HOME" | grep -q "دخول العميل"
-          ! printf '%s' "$HOME" | grep -qi "Client Login"
-          ! printf '%s' "$SITEJS" | grep -q "دخول العميل"
-          printf '%s' "$ADMIN" | grep -Eq 'name="csrf"|type="password"'
-          curl -LsS "$BASE/robots.txt" | grep -q "Sitemap:"
-          curl -LsS "$BASE/sitemap.xml" | grep -q "<urlset"
-          curl -LsS "$BASE/api/health" | grep -q '"installed"'
+          curl -LsS "$BASE/" -o /tmp/home
+          curl -LsS "$BASE/admin" -o /tmp/admin
+          curl -LsS "$BASE/assets/site.js" -o /tmp/sitejs
+          curl -LsS "$BASE/robots.txt" -o /tmp/robots
+          curl -LsS "$BASE/sitemap.xml" -o /tmp/sitemap
+          curl -LsS "$BASE/api/health" -o /tmp/health
+          ! grep -q "دخول العميل" /tmp/home
+          ! grep -qi "Client Login" /tmp/home
+          ! grep -q "دخول العميل" /tmp/sitejs
+          grep -Eq 'name="csrf"|type="password"' /tmp/admin
+          grep -q "Sitemap:" /tmp/robots
+          grep -q "<urlset" /tmp/sitemap
+          grep -q '"installed"' /tmp/health
           echo "LIVE_RUNTIME_QA_V75=PASS"
