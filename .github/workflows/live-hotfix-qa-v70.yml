@@ -1,0 +1,36 @@
+name: Live Hotfix QA v7.0
+on:
+  push:
+    branches: [hotfix-runtime-v70]
+jobs:
+  live:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test deployed preview
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://deploy-preview-19--rassmiy-marketing.netlify.app"
+          root_code=$(curl -sS -o /tmp/root -w "%{http_code}" "$BASE/")
+          health_code=$(curl -sS -o /tmp/health -w "%{http_code}" "$BASE/api/health")
+          admin_code=$(curl -sS -o /tmp/admin -w "%{http_code}" "$BASE/admin")
+          legacy_code=$(curl -sS -o /tmp/legacy -w "%{http_code}" "$BASE/admin/login")
+          robots_code=$(curl -sS -o /tmp/robots -w "%{http_code}" "$BASE/robots.txt")
+          sitemap_code=$(curl -sS -o /tmp/sitemap -w "%{http_code}" "$BASE/sitemap.xml")
+          echo "root=$root_code health=$health_code admin=$admin_code legacy=$legacy_code robots=$robots_code sitemap=$sitemap_code"
+          test "$root_code" = "200"
+          test "$health_code" = "200"
+          test "$admin_code" = "200"
+          test "$legacy_code" = "301"
+          test "$robots_code" = "200"
+          test "$sitemap_code" = "200"
+          ! grep -Fq "This function has crashed" /tmp/root
+          grep -Eq '"ok":true' /tmp/health
+          grep -Fq 'name="csrf"' /tmp/admin
+          grep -Fq 'name="email"' /tmp/admin
+          grep -Fq 'name="password"' /tmp/admin
+          ! grep -Fq 'دخول العميل' /tmp/root
+          ! grep -Fq 'Client Login' /tmp/root
+          grep -Fq 'Sitemap:' /tmp/robots
+          grep -Fq 'https://rassmiy-marketing.netlify.app/' /tmp/sitemap
+          echo "LIVE_HOTFIX_QA_V70=PASS"
