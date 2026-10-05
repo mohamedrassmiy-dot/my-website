@@ -57,3 +57,5 @@
 [functions]
   node_bundler = "esbuild"
   external_node_modules = ["sanitize-html"]
+
+# runtime fix v7.5 preview trigger
