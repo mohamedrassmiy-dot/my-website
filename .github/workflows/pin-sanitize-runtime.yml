@@ -1,0 +1,26 @@
+name: Pin sanitize-html runtime dependency
+permissions:
+  contents: write
+on:
+  push:
+    branches: [runtime-depfix-v71]
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: runtime-depfix-v71
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm install sanitize-html@2.14.0 --save-exact
+      - run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "fix: pin sanitize-html 2.14.0 for Netlify runtime"
+          git push origin HEAD:runtime-depfix-v71
