@@ -1,4 +1,4 @@
-name: Diagnose Live Function v7.4
+name: Live QA Runtime v7.5
 on:
   push:
     branches: [live-qa-v74]
@@ -6,19 +6,27 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect preview function responses
+      - name: Verify deploy preview 25
         shell: bash
         run: |
-          set -u
-          BASE="https://deploy-preview-24--rassmiy-marketing.netlify.app"
-          fail=0
-          for path in /admin /api/health /robots.txt /sitemap.xml /api/content-cards; do
-            echo "===== $path ====="
-            code=$(curl -L -sS -D /tmp/headers -o /tmp/body -w "%{http_code}" "$BASE$path")
-            echo "HTTP $code"
-            cat /tmp/headers
-            head -c 5000 /tmp/body || true
-            echo
-            [ "$code" = "200" ] || fail=1
+          set -euo pipefail
+          BASE="https://deploy-preview-25--rassmiy-marketing.netlify.app"
+          for path in / /admin /robots.txt /sitemap.xml /api/health /api/content-cards /ar/services.html /en/services.html; do
+            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+            ! grep -q "This function has crashed" /tmp/body
+            ! grep -q "ERR_REQUIRE_ESM" /tmp/body
+            ! grep -q "MODULE_NOT_FOUND" /tmp/body
           done
-          exit "$fail"
+          HOME=$(curl -LsS "$BASE/")
+          ADMIN=$(curl -LsS "$BASE/admin")
+          SITEJS=$(curl -LsS "$BASE/assets/site.js")
+          ! printf '%s' "$HOME" | grep -q "دخول العميل"
+          ! printf '%s' "$HOME" | grep -qi "Client Login"
+          ! printf '%s' "$SITEJS" | grep -q "دخول العميل"
+          printf '%s' "$ADMIN" | grep -Eq 'name="csrf"|type="password"'
+          curl -LsS "$BASE/robots.txt" | grep -q "Sitemap:"
+          curl -LsS "$BASE/sitemap.xml" | grep -q "<urlset"
+          curl -LsS "$BASE/api/health" | grep -q '"installed"'
+          echo "LIVE_RUNTIME_QA_V75=PASS"
