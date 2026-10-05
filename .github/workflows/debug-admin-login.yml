@@ -6,13 +6,22 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Decode and inspect state/session
+      - name: Inspect production session headers
         shell: bash
         run: |
           set -e
-          cat cms-v45/app.* | base64 -d | gunzip > /tmp/app.mjs
-          echo "=== first 180 lines ==="
-          sed -n '1,180p' /tmp/app.mjs
-          echo "=== persistence ==="
-          grep -n -B 25 -A 80 -E "async function (loadState|saveState)|function (loadState|saveState)" /tmp/app.mjs || true
+          BASE="https://rassmiy-marketing.netlify.app"
+          rm -f /tmp/cjar
+          echo "=== GET /admin/login ==="
+          curl -sS -D /tmp/h1 -c /tmp/cjar -o /tmp/b1 "$BASE/admin/login"
+          cat /tmp/h1
+          echo "=== cookie jar ==="
+          cat /tmp/cjar
+          echo "=== repeat GET /admin/login with jar ==="
+          curl -sS -D /tmp/h2 -b /tmp/cjar -c /tmp/cjar -o /tmp/b2 "$BASE/admin/login"
+          cat /tmp/h2
+          echo "=== anonymous GET /admin with jar ==="
+          curl -sS -D /tmp/h3 -b /tmp/cjar -o /tmp/b3 "$BASE/admin"
+          cat /tmp/h3
+          echo "=== csrf field exists ==="
+          grep -o 'name="csrf" value="[^"]*"' /tmp/b1 | head -1
