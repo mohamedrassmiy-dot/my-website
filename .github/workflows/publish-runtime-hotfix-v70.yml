@@ -1,0 +1,12 @@
+name: Publish Runtime Hotfix v7.0
+on:
+  push:
+    branches: [publish-hotfix-v70]
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish to Netlify production
+        run: npx -y @netlify/mcp@latest --site-id dbf13d3b-88e6-4396-ae96-4adb2ab937a8 --proxy-path "https://netlify-mcp.netlify.app/proxy/eyJhbGciOiJkaXIiLCJlbmMiOiJBMjU2R0NNIn0..e7EO3EpTIgb6IpW_.DthYu8MPn5xnO2DqBfG4Btb4EGZ6Agjb3Nl9oMo2vY7iEgWI27b1vSFc-ClyrNKS--E7FbzTNyCV1Utj5cpKigrKqCYzgcd7cZvbCZzR8iZ3YQkSVY9dEFMBGpZg-OaHkpJS2DOn2c81mrPEcQQ4Pdo7sKgQXJchcIThF-tMFJaoN3OZs9w2yW80UfZbZozkuPzdFH1Nka3ZKl7kYxj7JqrqwqRiUw7KXKOVbboZWshOD66HhrXh-IMqU9_GEwJDGXM-z8i8kJEcfqtNggrdg2HcntHRZVi2sPZFxsGwmB_u7QZgipgnACwlJsX47YiZPr4k6_1YesvxZi9brVWwbHf8lxN_JrcrWGEBfAvjyBNUtxcFvi4K70W8f91JcRgO7GlOXJdH.w85IF4yOANQb4nZjXn4Ehw" --no-wait
