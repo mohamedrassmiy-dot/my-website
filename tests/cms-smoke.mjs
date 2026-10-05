@@ -6,7 +6,12 @@ import assert from 'node:assert/strict';
 delete process.env.RECAPTCHA_SECRET_KEY;delete process.env.DATA_ENCRYPTION_KEY;
 const tmp=await fs.mkdtemp(path.join(os.tmpdir(),'rassmiy-qa-'));
 const source=await fs.readFile('release/netlify/functions/app.mjs','utf8');
-await fs.writeFile(path.join(tmp,'app.mjs'),source.replace("import sanitizeHtml from 'sanitize-html';",`import sanitizeHtml from '${import.meta.resolve('sanitize-html')}';`).replace("import { getStore, getDeployStore } from '@netlify/blobs';",`const stores=new Map();function getStore(name){if(!stores.has(name))stores.set(name,new Map());const data=stores.get(name);return {get:async key=>structuredClone(data.get(key)??null),setJSON:async(key,value)=>data.set(key,structuredClone(value)),set:async(key,value)=>data.set(key,value),delete:async key=>data.delete(key)}} const getDeployStore=getStore;`));
+const sanitizerImport=`import sanitizeHtml from '${import.meta.resolve('sanitize-html')}';`;
+const testSource=source
+  .replace("import sanitizeHtml from 'sanitize-html';",sanitizerImport)
+  .replace("import { createRequire as __rassmiyCreateRequire } from 'node:module';\nconst __rassmiyRequire=__rassmiyCreateRequire(import.meta.url);\nconst sanitizeHtml=__rassmiyRequire('sanitize-html');\n",sanitizerImport+"\n")
+  .replace("import { getStore, getDeployStore } from '@netlify/blobs';",`const stores=new Map();function getStore(name){if(!stores.has(name))stores.set(name,new Map());const data=stores.get(name);return {get:async key=>structuredClone(data.get(key)??null),setJSON:async(key,value)=>data.set(key,structuredClone(value)),set:async(key,value)=>data.set(key,value),delete:async key=>data.delete(key)}} const getDeployStore=getStore;`);
+await fs.writeFile(path.join(tmp,'app.mjs'),testSource);
 const {default:handler}=await import(path.join(tmp,'app.mjs'));
 let cookie='',checks=0;
 function ok(value,message){assert.ok(value,message);checks++;}
