@@ -1,4 +1,4 @@
-name: GSC Live Audit
+name: GSC Stability Audit
 on:
   push:
     branches: [gsc-live-audit]
@@ -6,19 +6,26 @@ jobs:
   audit:
     runs-on: ubuntu-latest
     steps:
-      - name: Audit production as Googlebot
+      - name: Repeated production crawl
         shell: bash
         run: |
-          set -u
+          set -euo pipefail
           BASE="https://rassmiy-marketing.netlify.app"
-          UA="Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
-          for p in / /robots.txt /sitemap.xml /en/index.html /admin; do
-            echo "===== $p ====="
-            curl -A "$UA" -sS -L -D /tmp/h -o /tmp/b "$BASE$p" || true
-            head -30 /tmp/h || true
-            echo "--- body-head ---"
-            head -c 1200 /tmp/b || true
-            echo
+          DESKTOP="Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+          MOBILE="Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+          fail=0
+          for ua in "$DESKTOP" "$MOBILE"; do
+            for i in $(seq 1 20); do
+              code=$(curl -A "$ua" -sS -o /tmp/b -w "%{http_code}" "$BASE/" || echo 000)
+              echo "root $i -> $code"
+              [ "$code" = "200" ] || fail=1
+              grep -Fq 'name="robots" content="index,follow' /tmp/b || fail=1
+              grep -Fq 'rel="canonical" href="https://rassmiy-marketing.netlify.app/"' /tmp/b || fail=1
+            done
           done
-          echo "===== ROOT SEO ====="
-          curl -A "$UA" -sS -L "$BASE/" | grep -Eio '<meta[^>]+robots[^>]*>|<link[^>]+canonical[^>]*>|<link[^>]+alternate[^>]*>|<title>[^<]+</title>' | head -40 || true
+          for p in /robots.txt /sitemap.xml; do
+            code=$(curl -A "$DESKTOP" -sS -o /tmp/b -w "%{http_code}" "$BASE$p" || echo 000)
+            echo "$p -> $code"
+            [ "$code" = "200" ] || fail=1
+          done
+          [ "$fail" = "0" ] && echo "GSC_STABILITY=PASS" || { echo "GSC_STABILITY=FAIL"; exit 1; }
