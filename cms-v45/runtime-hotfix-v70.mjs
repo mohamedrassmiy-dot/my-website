@@ -22,6 +22,7 @@ app=app.replace("if(path==='/admin/login'){","if(path==='/admin' && !isAdmin(ses
 // RASSMIY_ADMIN_LOGIN_FORM_FIX_V72 — /admin is both the visible login page and POST target.
 app=app.replaceAll('action="/admin/login"','action="/admin"');
 app=app.replaceAll('return=%2Fadmin%2Flogin','return=%2Fadmin');
+app=app.replace("function loginPage","/* RASSMIY_ADMIN_LOGIN_FORM_FIX_V72 */\nfunction loginPage");
 app=app.replace("if(path==='/admin'){ if(!isAdmin(session))return saveAnd(redirect('/admin/login')); const user=currentUser(state,session);","if(path==='/admin'){ const user=currentUser(state,session);");
 app=app.replaceAll("redirect('/admin/login')","redirect('/admin')");
 app=app.replaceAll("redirect('/admin/login?installed=1')","redirect('/admin?installed=1')");
