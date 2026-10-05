@@ -6,22 +6,45 @@ jobs:
   inspect:
     runs-on: ubuntu-latest
     steps:
-      - name: Inspect production session headers
+      - name: Verify preview 22 login flow
         shell: bash
         run: |
-          set -e
-          BASE="https://rassmiy-marketing.netlify.app"
+          set -euo pipefail
+          BASE="https://deploy-preview-22--rassmiy-marketing.netlify.app"
           rm -f /tmp/cjar
-          echo "=== GET /admin/login ==="
-          curl -sS -D /tmp/h1 -c /tmp/cjar -o /tmp/b1 "$BASE/admin/login"
+          echo "=== GET /admin ==="
+          code=$(curl -sS -D /tmp/h1 -c /tmp/cjar -o /tmp/b1 -w "%{http_code}" "$BASE/admin")
           cat /tmp/h1
-          echo "=== cookie jar ==="
-          cat /tmp/cjar
-          echo "=== repeat GET /admin/login with jar ==="
-          curl -sS -D /tmp/h2 -b /tmp/cjar -c /tmp/cjar -o /tmp/b2 "$BASE/admin/login"
+          echo "STATUS=$code"
+          grep -F 'form method="post" action="/admin"' /tmp/b1 >/dev/null
+          csrf=$(grep -o 'name="csrf" value="[^"]*"' /tmp/b1 | head -1 | sed -E 's/.*value="([^"]*)".*/\1/')
+          test -n "$csrf"
+          echo "FORM_ACTION=PASS"
+          echo "CSRF=PASS"
+
+          echo "=== POST /admin with invalid credentials ==="
+          pcode=$(curl -sS -D /tmp/h2 -b /tmp/cjar -c /tmp/cjar -o /tmp/b2 -w "%{http_code}" \
+            -X POST "$BASE/admin" \
+            --data-urlencode "csrf=$csrf" \
+            --data-urlencode "email=invalid@example.invalid" \
+            --data-urlencode "password=not-the-password")
           cat /tmp/h2
-          echo "=== anonymous GET /admin with jar ==="
-          curl -sS -D /tmp/h3 -b /tmp/cjar -o /tmp/b3 "$BASE/admin"
+          echo "POST_STATUS=$pcode"
+          test "$pcode" = "401"
+          grep -E 'بيانات الدخول غير صحيحة|Invalid credentials' /tmp/b2 >/dev/null
+          echo "POST_REACHES_LOGIN_HANDLER=PASS"
+
+          echo "=== legacy GET /admin/login ==="
+          glegacy=$(curl -sS -D /tmp/h3 -o /dev/null -w "%{http_code}" "$BASE/admin/login")
           cat /tmp/h3
-          echo "=== csrf field exists ==="
-          grep -o 'name="csrf" value="[^"]*"' /tmp/b1 | head -1
+          test "$glegacy" = "301"
+          grep -i '^location: /admin' /tmp/h3 >/dev/null
+          echo "LEGACY_GET=PASS"
+
+          echo "=== legacy POST /admin/login ==="
+          plegacy=$(curl -sS -D /tmp/h4 -o /dev/null -w "%{http_code}" -X POST "$BASE/admin/login" --data "x=1")
+          cat /tmp/h4
+          test "$plegacy" = "307"
+          grep -i '^location: /admin' /tmp/h4 >/dev/null
+          echo "LEGACY_POST_PRESERVED=PASS"
+          echo "ADMIN_LOGIN_LOOP_V72=PASS"
