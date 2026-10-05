@@ -1,0 +1,40 @@
+name: Live runtime QA v7.1
+on:
+  push:
+    branches: [runtime-depfix-v71]
+jobs:
+  runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Wait for Netlify preview and verify runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://deploy-preview-20--rassmiy-marketing.netlify.app"
+          fetch() {
+            local path="$1"
+            for i in {1..12}; do
+              code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path" || true)
+              echo "$path attempt $i -> $code"
+              if [ "$code" = "200" ]; then return 0; fi
+              sleep 5
+            done
+            cat /tmp/body || true
+            return 1
+          }
+          fetch "/"
+          ! grep -qi "This function has crashed" /tmp/body
+          ! grep -qi "دخول العميل" /tmp/body
+          ! grep -qi "Client Login" /tmp/body
+          fetch "/admin"
+          grep -Eqi "email|البريد|password|كلمة المرور" /tmp/body
+          fetch "/robots.txt"
+          grep -q "Sitemap:" /tmp/body
+          fetch "/sitemap.xml"
+          grep -q "<urlset" /tmp/body
+          fetch "/api/health"
+          grep -q "installed" /tmp/body
+          legacy=$(curl -sS -o /dev/null -w "%{http_code} %{redirect_url}" "$BASE/admin/login")
+          echo "legacy admin/login -> $legacy"
+          echo "$legacy" | grep -Eq "^30[12378] .*/admin$"
+          echo "LIVE_RUNTIME_QA_V71=PASS"
