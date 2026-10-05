@@ -2,7 +2,7 @@ import fs from 'node:fs';
 const root=process.argv[2]||'release',file=`${root}/netlify/functions/app.mjs`;
 let s=fs.readFileSync(file,'utf8');
 function change(a,b){if(!s.includes(a))throw new Error('Hardening anchor missing: '+a.slice(0,90));s=s.replace(a,b);}
-s="import { createRequire as __rassmiyCreateRequire } from 'node:module';\nconst __rassmiyRequire=__rassmiyCreateRequire(import.meta.url);\nconst sanitizeHtml=__rassmiyRequire('sanitize-html');\n"+s;
+s="import sanitizeHtml from 'sanitize-html';\n"+s;
 s+=String.raw`
 // SECURITY_HARDENING_V67
 function cleanContent(value){return sanitizeHtml(String(value||''),{allowedTags:[...sanitizeHtml.defaults.allowedTags,'img','figure','figcaption'],allowedAttributes:{...sanitizeHtml.defaults.allowedAttributes,'*':['class'],img:['src','alt','width','height','loading'],a:['href','name','target','rel']},allowedSchemes:['http','https','mailto','tel'],allowProtocolRelative:false,transformTags:{a:(tagName,attribs)=>({tagName,attribs:{...attribs,rel:'noopener noreferrer'}})}});}
