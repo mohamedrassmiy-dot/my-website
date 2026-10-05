@@ -1,0 +1,26 @@
+name: Live Production SEO QA v7.7
+on:
+  push:
+    branches: [live-qa-seo-v77]
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify production runtime, cache and SEO pages
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://rassmiy-marketing.netlify.app"
+          for path in / /admin /robots.txt /sitemap.xml /cache-flush.html             /ar/pages/%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D9%8A-seo-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6             /en/pages/seo-consultant-riyadh             /ar/pages/%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D9%8A-%D8%AA%D8%B3%D9%88%D9%8A%D9%82-%D8%B1%D9%82%D9%85%D9%8A-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6             /en/pages/digital-marketing-consultant-riyadh             /ar/articles /en/articles; do
+            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+            ! grep -qi "This function has crashed" /tmp/body
+          done
+          home=$(curl -LsS "$BASE/")
+          ! printf '%s' "$home" | grep -Eq "دخول العميل|Client Login"
+          printf '%s' "$home" | grep -Fq 'Full Stack Marketing'
+          curl -sSI "$BASE/cache-flush.html" | tr -d '\r' | grep -qi 'clear-site-data: "cache"'
+          old=$(curl -sS -o /dev/null -w "%{http_code} %{redirect_url}" "$BASE/ar/login.html")
+          echo "legacy login -> $old"
+          echo "LIVE_PRODUCTION_SEO_QA=PASS"
