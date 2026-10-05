@@ -1,0 +1,10 @@
+# Business Owner
+
+Business Owner is a practical business knowledge and advisory platform for entrepreneurs, business owners and decision-makers.
+
+Core topics: Business Engineering, Business Strategy, Organizational Structure, Growth Strategy, Marketing, SEO & AI Visibility, E-commerce, Digital Transformation, Commercial Agency & Distribution.
+
+Knowledge hub: https://bussneis-owner.netlify.app/insights/
+Services: https://bussneis-owner.netlify.app/services/
+Growth Diagnostic: https://bussneis-owner.netlify.app/growth-diagnostic/
+Contact: bussneis.owner@gmail.com
