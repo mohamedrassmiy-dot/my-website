@@ -5,6 +5,7 @@ const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const app=fs.readFileSync(path.join(root,'netlify/functions/app.mjs'),'utf8');
 const site=fs.readFileSync(path.join(root,'assets/site.js'),'utf8');
 must(pkg.dependencies?.['sanitize-html']==='2.14.0','sanitize-html pinned to htmlparser2 8.x compatible version');
+must(app.includes("__rassmiyCreateRequire")&&app.includes("__rassmiyRequire('sanitize-html')"),'sanitize-html loaded through CJS require');
 must(pkg.dependencies?.['@netlify/blobs']==='11.1.3','Netlify blobs pinned');
 must(site.includes('__RASSMIY_PUBLIC_AUTH_SCRUB_V70__'),'public auth scrub installed');
 must(app.includes('RASSMIY_LEGACY_LOGIN_REDIRECT_V70'),'legacy login redirects installed');
