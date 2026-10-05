@@ -4,7 +4,9 @@ const must=(x,m)=>{if(!x)throw new Error('RUNTIME QA FAIL: '+m);console.log('RUN
 const pkg=JSON.parse(fs.readFileSync('package.json','utf8'));
 const app=fs.readFileSync(path.join(root,'netlify/functions/app.mjs'),'utf8');
 const site=fs.readFileSync(path.join(root,'assets/site.js'),'utf8');
-must(pkg.dependencies?.['sanitize-html']==='2.14.0','sanitize-html pinned to htmlparser2 8.x compatible version');
+must(pkg.dependencies?.['sanitize-html']==='2.14.0','sanitize-html pinned');
+const netlifyCfg=fs.readFileSync('netlify.toml','utf8');
+must(!/external_node_modules\s*=\s*\[[^\]]*sanitize-html/i.test(netlifyCfg),'sanitize-html is bundled by Netlify instead of externalized');
 must(app.includes("import sanitizeHtml from 'sanitize-html';"),'sanitize-html statically imported for Netlify tracing');
 must(pkg.dependencies?.['@netlify/blobs']==='11.1.3','Netlify blobs pinned');
 must(site.includes('__RASSMIY_PUBLIC_AUTH_SCRUB_V70__'),'public auth scrub installed');
