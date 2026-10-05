@@ -47,5 +47,9 @@ jobs:
           node cms-v45/security-audit-v62.mjs release
           node cms-v45/growth-qa-v60.mjs release
           node cms-v45/runtime-qa-v70.mjs release
-          node tests/cms-smoke.mjs
-          python3 tests/static-audit.py
+      - name: Inspect admin auth routes
+        run: grep -n -C 6 "/admin/login" release/netlify/functions/app.mjs || true
+      - name: CMS smoke and penetration regression
+        run: node tests/cms-smoke.mjs
+      - name: Static audit
+        run: python3 tests/static-audit.py
