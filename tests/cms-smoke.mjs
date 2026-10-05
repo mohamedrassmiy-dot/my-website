@@ -49,7 +49,7 @@ const adminCookie=cookie;cookie='';r=await request('/admin');const salesCsrf=tok
 // Non-destructive penetration checks against a disposable store.
 const originalCookie=cookie;
 r=await request('/admin/logout',{});ok(r.res.status===419,'logout CSRF rejected');
-cookie='rassmiy_sid=forged.invalid';r=await request('/admin');ok([302,303].includes(r.res.status),'forged session denied');cookie=originalCookie;
+cookie='rassmiy_sid=forged.invalid';r=await request('/admin');ok(r.res.status===200&&Boolean(token(r.text)),'forged session denied with login screen');cookie=originalCookie;
 cookie=originalCookie+'; broken=%E0%A4';r=await request('/admin');ok(r.res.status===200,'malformed cookie cannot crash CMS');cookie=originalCookie;
 r=await request('/api/security-events',null,false);ok(r.res.status===401,'anonymous attack log denied');
 r=await request('/.env');ok(r.res.status===403,'environment probe blocked');r=await request('/api/security-events');ok(r.res.status===200&&JSON.parse(r.text).events.length>0,'administrator reads attack log');
