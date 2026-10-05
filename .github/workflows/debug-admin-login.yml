@@ -7,16 +7,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Decode and inspect admin auth
+      - name: Decode and inspect state/session
         shell: bash
         run: |
           set -e
           cat cms-v45/app.* | base64 -d | gunzip > /tmp/app.mjs
-          echo "=== package ==="
-          cat package.json
-          echo "=== auth/session symbols ==="
-          grep -nE "admin/login|Set-Cookie|session|cookie|handleLogin|loginForm|verifyPassword|password|SESSION|redirect\(" /tmp/app.mjs | head -220
-          echo "=== login route context ==="
-          grep -n -B 35 -A 90 "path==='/admin/login'" /tmp/app.mjs || true
-          echo "=== admin route context ==="
-          grep -n -B 30 -A 90 "path==='/admin'" /tmp/app.mjs || true
+          echo "=== first 180 lines ==="
+          sed -n '1,180p' /tmp/app.mjs
+          echo "=== persistence ==="
+          grep -n -B 25 -A 80 -E "async function (loadState|saveState)|function (loadState|saveState)" /tmp/app.mjs || true
