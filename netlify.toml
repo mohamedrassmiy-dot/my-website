@@ -52,3 +52,8 @@
 # frontend clicks v5.3
 
 # growth CMS v6.0 — lead pages, SEO articles, editable cards
+
+
+[functions]
+  node_bundler = "esbuild"
+  external_node_modules = ["sanitize-html", "htmlparser2"]
