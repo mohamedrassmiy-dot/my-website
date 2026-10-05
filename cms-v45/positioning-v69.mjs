@@ -11,8 +11,7 @@ for(const lang of ['ar','en'])for(const page of [...pages,...(lang==='ar'?['root
  fs.writeFileSync(file,h);
 }
 
-// Keep existing public URLs and editorial digital-channel topics; update professional positioning.
-for(const lang of ['ar','en']){const slug=lang==='en'?'digital-marketing-consultant-riyadh':'استشاري-تسويق-رقمي-الرياض';const f=`${root}/${lang}/pages/${slug}/index.html`;if(fs.existsSync(f))fs.writeFileSync(f,positioning(fs.readFileSync(f,'utf8')));}
+// Commercial SEO landing pages intentionally preserve their exact search-language keywords.
 const appFile=`${root}/netlify/functions/app.mjs`;let app=fs.readFileSync(appFile,'utf8');
 app=app.replace("Rassmiy Marketing — Digital Marketing, SEO, Paid Media, E-Commerce and Content.","Rassmiy Marketing — Full Stack Marketing: Strategy, SEO, Paid Media, E-Commerce, Content, Events and Analytics.");
 fs.writeFileSync(appFile,app);
