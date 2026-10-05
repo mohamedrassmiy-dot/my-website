@@ -19,6 +19,9 @@ let app=fs.readFileSync(appFile,'utf8');
 /* RASSMIY_ADMIN_SINGLE_ENTRY_V71
    /admin is the only admin entry point: anonymous GET/POST renders/processes login. */
 app=app.replace("if(path==='/admin/login'){","if(path==='/admin' && !isAdmin(session)){");
+// RASSMIY_ADMIN_LOGIN_FORM_FIX_V72 — /admin is both the visible login page and POST target.
+app=app.replaceAll('action="/admin/login"','action="/admin"');
+app=app.replaceAll('return=%2Fadmin%2Flogin','return=%2Fadmin');
 app=app.replace("if(path==='/admin'){ if(!isAdmin(session))return saveAnd(redirect('/admin/login')); const user=currentUser(state,session);","if(path==='/admin'){ const user=currentUser(state,session);");
 app=app.replaceAll("redirect('/admin/login')","redirect('/admin')");
 app=app.replaceAll("redirect('/admin/login?installed=1')","redirect('/admin?installed=1')");
@@ -51,7 +54,9 @@ app=fs.readFileSync(appFile,'utf8');
 const routeAnchor="if(path==='/api/health')";
 if(app.includes(routeAnchor)&&!app.includes('RASSMIY_LEGACY_LOGIN_REDIRECT_V70')){
   app=app.replace(routeAnchor,`// RASSMIY_LEGACY_LOGIN_REDIRECT_V70
-  if(['/ar/login.html','/en/login.html','/ar/dashboard.html','/en/dashboard.html','/admin/login'].includes(path))return redirect('/admin',301);
+  if(['/ar/login.html','/en/login.html','/ar/dashboard.html','/en/dashboard.html'].includes(path))return redirect('/admin',301);
+  // Preserve POST body for any cached/legacy admin-login form, while GET canonicalizes to /admin.
+  if(path==='/admin/login')return redirect('/admin',req.method==='POST'?307:301);
   `+routeAnchor);
 }
 fs.writeFileSync(appFile,app);
