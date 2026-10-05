@@ -58,3 +58,5 @@
   node_bundler = "esbuild"
 
 # runtime fix v7.6 — bundle sanitize-html and transitive parser dependencies with esbuild
+
+# seo demand v7.8 preview trigger
