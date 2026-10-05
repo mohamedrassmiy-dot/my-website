@@ -1,0 +1,24 @@
+name: GSC Live Audit
+on:
+  push:
+    branches: [gsc-live-audit]
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Audit production as Googlebot
+        shell: bash
+        run: |
+          set -u
+          BASE="https://rassmiy-marketing.netlify.app"
+          UA="Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+          for p in / /robots.txt /sitemap.xml /en/index.html /admin; do
+            echo "===== $p ====="
+            curl -A "$UA" -sS -L -D /tmp/h -o /tmp/b "$BASE$p" || true
+            head -30 /tmp/h || true
+            echo "--- body-head ---"
+            head -c 1200 /tmp/b || true
+            echo
+          done
+          echo "===== ROOT SEO ====="
+          curl -A "$UA" -sS -L "$BASE/" | grep -Eio '<meta[^>]+robots[^>]*>|<link[^>]+canonical[^>]*>|<link[^>]+alternate[^>]*>|<title>[^<]+</title>' | head -40 || true
