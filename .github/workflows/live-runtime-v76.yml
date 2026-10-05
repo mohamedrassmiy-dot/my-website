@@ -1,0 +1,30 @@
+name: Live Runtime QA v7.6
+on:
+  push:
+    branches: [live-runtime-v76]
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify Netlify preview runtime
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://deploy-preview-26--rassmiy-marketing.netlify.app"
+          check() {
+            path="$1"
+            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+            ! grep -Fq "This function has crashed" /tmp/body
+            ! grep -Fq "ERR_REQUIRE_ESM" /tmp/body
+          }
+          check "/"
+          check "/admin"
+          check "/api/health"
+          curl -LsS "$BASE/" > /tmp/home
+          ! grep -Fq "دخول العميل" /tmp/home
+          ! grep -Fq "Client Login" /tmp/home
+          ! grep -Eq 'href=["'\'' ]*/admin(?:/login)?["'\'' ]' /tmp/home
+          curl -LsSI "$BASE/admin/login" | grep -Eq '^location: /admin\r?$'
+          echo "LIVE_RUNTIME_V76=PASS"
