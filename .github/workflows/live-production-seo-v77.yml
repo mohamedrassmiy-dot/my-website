@@ -1,4 +1,4 @@
-name: Live Production SEO QA v7.7
+name: Live SEO Preview v7.8
 on:
   push:
     branches: [live-qa-seo-v77]
@@ -6,21 +6,42 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify production runtime, cache and SEO pages
+      - name: Verify preview 28
         shell: bash
         run: |
           set -euo pipefail
-          BASE="https://rassmiy-marketing.netlify.app"
-          for path in / /admin /robots.txt /sitemap.xml /cache-flush.html             /ar/pages/%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D9%8A-seo-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6             /en/pages/seo-consultant-riyadh             /ar/pages/%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D9%8A-%D8%AA%D8%B3%D9%88%D9%8A%D9%82-%D8%B1%D9%82%D9%85%D9%8A-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6             /en/pages/digital-marketing-consultant-riyadh             /ar/articles /en/articles; do
-            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path")
+          BASE="https://deploy-preview-28--rassmiy-marketing.netlify.app"
+          paths=(
+            "/"
+            "/admin"
+            "/robots.txt"
+            "/sitemap.xml"
+            "/cache-flush.html"
+            "/ar/pages/%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D9%8A-seo-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6"
+            "/en/pages/seo-consultant-riyadh"
+            "/ar/articles/%D8%AA%D9%83%D9%84%D9%81%D8%A9-seo-%D9%81%D9%8A-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9-2026/"
+            "/en/articles/seo-cost-saudi-arabia-2026/"
+            "/ar/articles/%D9%85%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1-seo-%D8%A7%D9%85-%D8%B4%D8%B1%D9%83%D8%A9-seo-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6/"
+            "/en/articles/seo-consultant-vs-agency-riyadh/"
+            "/ar/articles/%D8%AA%D9%83%D9%84%D9%81%D8%A9-%D8%A7%D8%AF%D8%A7%D8%B1%D8%A9-google-ads-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9-2026/"
+            "/en/articles/google-ads-management-cost-saudi-arabia-2026/"
+          )
+          for path in "${paths[@]}"; do
+            code=$(curl -LsS -o /tmp/body -w "%{http_code}" "$BASE$path")
             echo "$path -> $code"
             test "$code" = "200"
             ! grep -qi "This function has crashed" /tmp/body
           done
           home=$(curl -LsS "$BASE/")
-          ! printf '%s' "$home" | grep -Eq "دخول العميل|Client Login"
-          printf '%s' "$home" | grep -Fq 'Full Stack Marketing'
+          printf '%s' "$home" | grep -Fq 'استشاري تسويق في الرياض'
+          printf '%s' "$home" | grep -Fq '/assets/styles.css?v=78'
+          printf '%s' "$home" | grep -Fq '/assets/site.js?v=78'
+          ! printf '%s' "$home" | grep -Eq 'دخول العميل|Client Login'
+          seo=$(curl -LsS "$BASE/ar/pages/%D8%A7%D8%B3%D8%AA%D8%B4%D8%A7%D8%B1%D9%8A-seo-%D8%A7%D9%84%D8%B1%D9%8A%D8%A7%D8%B6")
+          printf '%s' "$seo" | grep -Fq 'SEO Opportunity Review'
+          printf '%s' "$seo" | grep -Fq 'FAQPage'
+          cost=$(curl -LsS "$BASE/ar/articles/%D8%AA%D9%83%D9%84%D9%81%D8%A9-seo-%D9%81%D9%8A-%D8%A7%D9%84%D8%B3%D8%B9%D9%88%D8%AF%D9%8A%D8%A9-2026/")
+          printf '%s' "$cost" | grep -Fq 'whatsapp-floating'
+          printf '%s' "$cost" | grep -Fq 'linkedin.com/company/rassmiy-marketing/'
           curl -sSI "$BASE/cache-flush.html" | tr -d '\r' | grep -qi 'clear-site-data: "cache"'
-          old=$(curl -sS -o /dev/null -w "%{http_code} %{redirect_url}" "$BASE/ar/login.html")
-          echo "legacy login -> $old"
-          echo "LIVE_PRODUCTION_SEO_QA=PASS"
+          echo "LIVE_SEO_PREVIEW_V78=PASS"
