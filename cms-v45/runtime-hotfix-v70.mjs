@@ -21,6 +21,7 @@ let app=fs.readFileSync(appFile,'utf8');
 app=app.replace("if(path==='/admin/login'){","if(path==='/admin' && !isAdmin(session)){");
 app=app.replace("if(path==='/admin'){ if(!isAdmin(session))return saveAnd(redirect('/admin/login')); const user=currentUser(state,session);","if(path==='/admin'){ const user=currentUser(state,session);");
 app=app.replaceAll("redirect('/admin/login')","redirect('/admin')");
+app=app.replaceAll("redirect('/admin/login?installed=1')","redirect('/admin?installed=1')");
 
 app=app.replace(/<a\b[^>]*href=["']\/admin(?:\/login)?["'][^>]*>[\s\S]*?<\/a>/gi,'');
 app=app.replace(/<a\b[^>]*href=["'][^"']*(?:login|dashboard)\.html[^"']*["'][^>]*>[\s\S]*?<\/a>/gi,'');
