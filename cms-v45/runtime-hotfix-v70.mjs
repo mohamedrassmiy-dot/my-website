@@ -16,6 +16,12 @@ for(const file of walk(root).filter(f=>f.endsWith('.html'))){
 
 // Dynamic CMS pages must not advertise admin/client login either.
 let app=fs.readFileSync(appFile,'utf8');
+/* RASSMIY_ADMIN_SINGLE_ENTRY_V71
+   /admin is the only admin entry point: anonymous GET/POST renders/processes login. */
+app=app.replace("if(path==='/admin/login'){","if(path==='/admin' && !isAdmin(session)){");
+app=app.replace("if(path==='/admin'){ if(!isAdmin(session))return saveAnd(redirect('/admin/login')); const user=currentUser(state,session);","if(path==='/admin'){ const user=currentUser(state,session);");
+app=app.replaceAll("redirect('/admin/login')","redirect('/admin')");
+
 app=app.replace(/<a\b[^>]*href=["']\/admin(?:\/login)?["'][^>]*>[\s\S]*?<\/a>/gi,'');
 app=app.replace(/<a\b[^>]*href=["'][^"']*(?:login|dashboard)\.html[^"']*["'][^>]*>[\s\S]*?<\/a>/gi,'');
 fs.writeFileSync(appFile,app);
