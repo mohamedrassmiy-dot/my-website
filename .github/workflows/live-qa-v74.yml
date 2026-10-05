@@ -1,0 +1,30 @@
+name: Live QA Runtime v7.4
+on:
+  push:
+    branches: [live-qa-v74]
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Verify deploy preview 24
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE="https://deploy-preview-24--rassmiy-marketing.netlify.app"
+          for path in / /admin /robots.txt /sitemap.xml /api/health /ar/services.html /en/services.html; do
+            code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path")
+            echo "$path -> $code"
+            test "$code" = "200"
+            ! grep -q "This function has crashed" /tmp/body
+            ! grep -q "ERR_REQUIRE_ESM" /tmp/body
+          done
+          HOME=$(curl -LsS "$BASE/")
+          ADMIN=$(curl -LsS "$BASE/admin")
+          SITEJS=$(curl -LsS "$BASE/assets/site.js")
+          ! printf '%s' "$HOME" | grep -q "دخول العميل"
+          ! printf '%s' "$HOME" | grep -qi "Client Login"
+          ! printf '%s' "$SITEJS" | grep -q "دخول العميل"
+          printf '%s' "$ADMIN" | grep -Eq 'name="csrf"|type="password"'
+          curl -LsS "$BASE/robots.txt" | grep -q "Sitemap:"
+          curl -LsS "$BASE/sitemap.xml" | grep -q "<urlset"
+          echo "LIVE_RUNTIME_QA_V74=PASS"
