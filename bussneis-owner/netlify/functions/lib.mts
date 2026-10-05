@@ -1,6 +1,6 @@
 import { getStore, getDeployStore } from "@netlify/blobs";
 import sanitizeHtml from "sanitize-html";
-import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual, createCipheriv, createDecipheriv } from "node:crypto";
 import { DEFAULT_STATE } from "./seed.mts";
 
 const STORE_NAME = "business-owner-cms";
@@ -111,6 +111,41 @@ export function cleanContentItem(input: any, type: string) {
     og_description: String(input?.og_description || input?.meta_description || input?.excerpt || "").slice(0, 320),
     og_image: String(input?.og_image || input?.featured_image || "").slice(0, 1000)
   };
+}
+
+
+export function encryptText(value: string) {
+  const rawKey = env("CMS_DATA_KEY");
+  if (!rawKey) return String(value || "");
+  try {
+    const key = Buffer.from(rawKey, "base64");
+    if (key.length !== 32) return String(value || "");
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", key, iv);
+    const encrypted = Buffer.concat([cipher.update(String(value || ""), "utf8"), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    return "enc$" + Buffer.concat([iv, tag, encrypted]).toString("base64url");
+  } catch {
+    return String(value || "");
+  }
+}
+
+export function decryptText(value: string) {
+  if (!String(value || "").startsWith("enc$")) return String(value || "");
+  const rawKey = env("CMS_DATA_KEY");
+  if (!rawKey) return "";
+  try {
+    const key = Buffer.from(rawKey, "base64");
+    const buf = Buffer.from(String(value).slice(4), "base64url");
+    const iv = buf.subarray(0, 12);
+    const tag = buf.subarray(12, 28);
+    const encrypted = buf.subarray(28);
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    return Buffer.concat([decipher.update(encrypted), decipher.final()]).toString("utf8");
+  } catch {
+    return "";
+  }
 }
 
 export function hashPassword(password: string) {
