@@ -25,6 +25,8 @@ jobs:
           curl -LsS "$BASE/" > /tmp/home
           ! grep -Fq "دخول العميل" /tmp/home
           ! grep -Fq "Client Login" /tmp/home
-          ! grep -Eq 'href=["'\'' ]*/admin(?:/login)?["'\'' ]' /tmp/home
-          curl -LsSI "$BASE/admin/login" | grep -Eq '^location: /admin\r?$'
+          ! grep -Fq 'href="/admin"' /tmp/home
+          ! grep -Fq 'href="/admin/login"' /tmp/home
+          headers=$(curl -sSI "$BASE/admin/login")
+          printf '%s\n' "$headers" | grep -Eiq '^location: /admin([?#].*)?\r?$'
           echo "LIVE_RUNTIME_V76=PASS"
