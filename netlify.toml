@@ -56,4 +56,5 @@
 
 [functions]
   node_bundler = "esbuild"
-  external_node_modules = ["sanitize-html"]
+
+# runtime fix v7.6 — bundle sanitize-html and transitive parser dependencies with esbuild
