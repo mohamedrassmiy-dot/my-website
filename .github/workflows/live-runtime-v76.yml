@@ -6,27 +6,26 @@ jobs:
   qa:
     runs-on: ubuntu-latest
     steps:
-      - name: Verify Netlify preview runtime
+      - name: Diagnose Netlify preview runtime
         shell: bash
         run: |
-          set -euo pipefail
+          set -u
           BASE="https://deploy-preview-26--rassmiy-marketing.netlify.app"
-          check() {
-            path="$1"
+          fail=0
+          for path in / /admin /api/health; do
             code=$(curl -L -sS -o /tmp/body -w "%{http_code}" "$BASE$path")
-            echo "$path -> $code"
-            test "$code" = "200"
-            ! grep -Fq "This function has crashed" /tmp/body
-            ! grep -Fq "ERR_REQUIRE_ESM" /tmp/body
-          }
-          check "/"
-          check "/admin"
-          check "/api/health"
+            echo "HTTP $path -> $code"
+            [ "$code" = "200" ] || fail=1
+            if grep -Fq "This function has crashed" /tmp/body; then echo "FAIL crash page at $path"; fail=1; else echo "PASS no crash at $path"; fi
+            if grep -Fq "ERR_REQUIRE_ESM" /tmp/body; then echo "FAIL ESM error at $path"; fail=1; else echo "PASS no ESM error at $path"; fi
+          done
           curl -LsS "$BASE/" > /tmp/home
-          ! grep -Fq "دخول العميل" /tmp/home
-          ! grep -Fq "Client Login" /tmp/home
-          ! grep -Fq 'href="/admin"' /tmp/home
-          ! grep -Fq 'href="/admin/login"' /tmp/home
-          headers=$(curl -sSI "$BASE/admin/login")
-          printf '%s\n' "$headers" | grep -Eiq '^location: /admin([?#].*)?\r?$'
-          echo "LIVE_RUNTIME_V76=PASS"
+          if grep -Fq "دخول العميل" /tmp/home; then echo "FAIL Arabic client login still visible"; fail=1; else echo "PASS Arabic client login removed"; fi
+          if grep -Fq "Client Login" /tmp/home; then echo "FAIL English client login still visible"; fail=1; else echo "PASS English client login removed"; fi
+          if grep -Fq 'href="/admin"' /tmp/home; then echo "FAIL public /admin link still present"; fail=1; else echo "PASS public /admin link removed"; fi
+          if grep -Fq 'href="/admin/login"' /tmp/home; then echo "FAIL public /admin/login link still present"; fail=1; else echo "PASS public /admin/login link removed"; fi
+          echo "--- /admin/login headers ---"
+          curl -sSI "$BASE/admin/login" | tr -d '\r'
+          headers=$(curl -sSI "$BASE/admin/login" | tr -d '\r')
+          if printf '%s\n' "$headers" | grep -Eiq '^location: /admin([?#].*)?$'; then echo "PASS legacy login redirects to /admin"; else echo "FAIL legacy login redirect"; fail=1; fi
+          [ "$fail" = "0" ] && echo "LIVE_RUNTIME_V76=PASS" || { echo "LIVE_RUNTIME_V76=FAIL"; exit 1; }
