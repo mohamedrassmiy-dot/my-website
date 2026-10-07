@@ -85,6 +85,16 @@ fs.writeFileSync(netlifyBlobsMain,shim);
 
 const app=await import("./release/netlify/functions/app.mjs");
 const root=path.resolve("release");
+const googleVerificationFiles={
+  "/googlef284124f6e4cc6fb.html":"google-site-verification: googlef284124f6e4cc6fb.html\n",
+  "/google5f2aa36fd981433f.html":"google-site-verification: google5f2aa36fd981433f.html\n"
+};
+// Materialize verification files physically at the public root as well as serving
+// them through the runtime router. Google Search Console requires the exact
+// filename/content at the exact URL and does not accept an auth-gated file.
+for(const [pathname,body] of Object.entries(googleVerificationFiles)){
+  try{fs.writeFileSync(path.join(root,pathname.slice(1)),body,{encoding:"utf8"});}catch(err){console.error("[GSC_FILE_WRITE_ERROR]",pathname,err?.message||err);}
+}
 const port=Number(process.env.PORT||8080);
 const mime={
   ".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",
@@ -279,14 +289,12 @@ const server=http.createServer(async(req,res)=>{
       }
       res.statusCode=405;res.end("Method Not Allowed");return;
     }
-    const googleVerificationFiles={
-      "/googlef284124f6e4cc6fb.html":"google-site-verification: googlef284124f6e4cc6fb.html\n",
-      "/google5f2aa36fd981433f.html":"google-site-verification: google5f2aa36fd981433f.html\n"
-    };
     if(Object.prototype.hasOwnProperty.call(googleVerificationFiles,pathname)){
       res.statusCode=200;
       res.setHeader("Content-Type","text/html; charset=utf-8");
-      res.setHeader("Cache-Control","public, max-age=300");
+      res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
+      res.setHeader("Pragma","no-cache");
+      res.setHeader("X-Robots-Tag","noindex");
       res.end(googleVerificationFiles[pathname]);
       return;
     }
@@ -399,6 +407,13 @@ async function productionSelfTest(base){
   await check("favicon","/favicon.ico",[200]);
   await check("gsc-file-1","/googlef284124f6e4cc6fb.html",[200]);
   await check("gsc-file-2","/google5f2aa36fd981433f.html",[200]);
+  for(const [p,expected] of Object.entries(googleVerificationFiles)){
+    try{
+      const rr=await fetch(base+p,{redirect:"manual",cache:"no-store"});
+      const body=await rr.text();
+      tests.push({name:"gsc-exact:"+p,path:p,status:rr.status,ok:rr.status===200&&body===expected,exact:body===expected,redirect:rr.headers.get("location")||null});
+    }catch(err){tests.push({name:"gsc-exact:"+p,path:p,status:0,ok:false,error:String(err?.message||err)});}
+  }
   let customStorage=false;try{writeCustomCode(readCustomCode());customStorage=fs.existsSync(customCodeFile);}catch{}
   tests.push({name:"custom-code-storage",path:customCodeFile,status:customStorage?200:500,ok:customStorage});
   await check("api-health","/api/health",[200]);
