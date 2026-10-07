@@ -103,10 +103,25 @@ function safeFile(urlPath){
   }
   return null;
 }
+function injectGoogleVerification(html){
+  const token=String(process.env.GOOGLE_SITE_VERIFICATION||"").trim();
+  if(!token) return html;
+  const safe=token.replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const meta=`<meta name="google-site-verification" content="${safe}">`;
+  const existing=/<meta\s+name=["']google-site-verification["'][^>]*>/i;
+  if(existing.test(html)) return html.replace(existing,meta);
+  return html.replace(/<\/head>/i,`  ${meta}\n</head>`);
+}
 function sendFile(res,f){
   res.statusCode=200;
-  res.setHeader("Content-Type",mime[path.extname(f).toLowerCase()]||"application/octet-stream");
+  const type=mime[path.extname(f).toLowerCase()]||"application/octet-stream";
+  res.setHeader("Content-Type",type);
   if(f.includes(path.sep+"admin"+path.sep)||f.endsWith(path.sep+"admin.html")) res.setHeader("Cache-Control","no-store, max-age=0");
+  if(path.extname(f).toLowerCase()===".html"){
+    const html=fs.readFileSync(f,"utf8");
+    res.end(injectGoogleVerification(html));
+    return;
+  }
   fs.createReadStream(f).pipe(res);
 }
 function readBody(req,max=25*1024*1024){
@@ -249,7 +264,13 @@ async function productionSelfTest(base){
     try{
       const r=await fetch(base+p,{redirect:"manual"});
       const item={name,path:p,status:r.status,location:r.headers.get("location")||null,ok:allowed.includes(r.status)};
-      if(p==="/api/health"&&r.status===200){const j=await r.json().catch(()=>({}));item.installed=Boolean(j?.installed);item.ok=item.ok&&item.installed;}
+      if(p==="/"&&r.status===200){
+        const html=await r.text();
+        const token=String(process.env.GOOGLE_SITE_VERIFICATION||"").trim();
+        item.googleVerificationMeta=Boolean(token&&html.includes(`name="google-site-verification"`)&&html.includes(`content="${token}"`));
+        item.ok=item.ok&&item.googleVerificationMeta;
+      }
+      else if(p==="/api/health"&&r.status===200){const j=await r.json().catch(()=>({}));item.installed=Boolean(j?.installed);item.ok=item.ok&&item.installed;}
       else if(p==="/api/content-cards"&&r.status===200){const j=await r.json().catch(()=>({}));item.cards=Array.isArray(j?.cards)?j.cards.length:-1;item.ok=item.ok&&item.cards>0;}
       else await r.arrayBuffer();
       tests.push(item);
