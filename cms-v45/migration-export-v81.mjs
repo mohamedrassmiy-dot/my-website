@@ -66,7 +66,7 @@ export default async (req)=>{
   const counts={users:(s.users||[]).length,pages:(s.pages||[]).length,articles:(s.articles||[]).length,leads:(s.leads||[]).length,media:(s.media||[]).length,redirects:(s.redirects||[]).length,revisions:(s.revisions||[]).length,activity:(s.activity||[]).length,blobKeys:keys.length};
   return new Response(JSON.stringify({v:3,kind:'manifest',state:s,keys,counts,encryption:{encryptedDetected:revealed.encryptedDetected,decrypted:revealed.decrypted}}),{status:200,headers});
 };
-export const config={path:'/api/migration/export'};
+
 `;
 fs.writeFileSync(out,fn);
 console.log('RASSMIY_MIGRATION_EXPORT_V83=STANDALONE_FUNCTION');
