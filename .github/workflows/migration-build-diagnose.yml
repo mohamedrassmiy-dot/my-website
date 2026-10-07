@@ -26,3 +26,6 @@ jobs:
         run: |
           sed -n '65,105p' release/netlify/functions/app.mjs
           grep -n -E 'storeForContext|STATE|state-|getStore|getDeployStore|loadStateRaw|saveStateRaw' release/netlify/functions/app.mjs | head -80
+      - name: Bundle functions like Netlify
+        run: |
+          npx --yes netlify-cli@latest functions:build --src release/netlify/functions --functions /tmp/netlify-functions-build --debug
