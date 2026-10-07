@@ -1,11 +1,13 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 // Railway compatibility: replace Netlify Blobs with durable local storage on the mounted Railway volume.
 const blobRoot=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
 fs.mkdirSync(blobRoot,{recursive:true});
 const netlifyBlobsMain=path.resolve("node_modules/@netlify/blobs/dist/main.js");
+// Keep a separate copy of the real Netlify Blobs client for the one-time source migration.
+const realNetlifyBlobs=await import(pathToFileURL(netlifyBlobsMain).href+"?rassmiySource=1");
 const shim=String.raw`
 import fs from "node:fs"; import path from "node:path"; import crypto from "node:crypto";
 const root=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
@@ -29,7 +31,107 @@ export const connectLambda=()=>{};
 export const connectLocal=()=>{};
 `;
 fs.writeFileSync(netlifyBlobsMain,shim);
+const railwayBlobs=await import("@netlify/blobs");
 const app = await import("./release/netlify/functions/app.mjs");
+
+const MIGRATION_SOURCE_SITE_ID="dbf13d3b-88e6-4396-ae96-4adb2ab937a8";
+const MIGRATION_MARKER=path.join(path.dirname(blobRoot),"rassmiy-migration-complete.json");
+const storeEnc=s=>Buffer.from(String(s)).toString("base64url");
+const keyEnc=s=>Buffer.from(String(s)).toString("base64url");
+
+async function verifyMigrationEncryption(state){
+  const encrypted=[];
+  for(const lead of (state?.leads||[])){
+    for(const field of ["name","email","phone","message"]){
+      const value=lead?.[field];
+      if(typeof value==="string"&&value.startsWith("enc:v1:")) encrypted.push(value);
+    }
+  }
+  if(!encrypted.length) return {encrypted:false,verified:true};
+  const raw=process.env.DATA_ENCRYPTION_KEY||"";
+  if(!raw) return {encrypted:true,verified:false,reason:"DATA_ENCRYPTION_KEY_REQUIRED"};
+  try{
+    const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(raw));
+    const key=await crypto.subtle.importKey("raw",digest,{name:"AES-GCM"},false,["decrypt"]);
+    const value=encrypted[0];
+    const [,ver,ivb,ctb]=value.split(":");
+    const iv=new Uint8Array(Buffer.from(ivb,"base64url"));
+    const ct=new Uint8Array(Buffer.from(ctb,"base64url"));
+    await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ct);
+    return {encrypted:true,verified:true};
+  }catch{
+    return {encrypted:true,verified:false,reason:"DATA_ENCRYPTION_KEY_MISMATCH"};
+  }
+}
+
+async function maybeMigrateFromNetlify(){
+  const token=String(process.env.NETLIFY_AUTH_TOKEN||"").trim();
+  if(!token){console.log("[RASSMIY_MIGRATION] waiting_for_NETLIFY_AUTH_TOKEN");return;}
+  if(fs.existsSync(MIGRATION_MARKER)){console.log("[RASSMIY_MIGRATION] already_complete");return;}
+  const source=realNetlifyBlobs.getStore("rassmiy-cms",{siteID:MIGRATION_SOURCE_SITE_ID,token,consistency:"strong"});
+  const state=await source.get("state",{type:"json"});
+  if(!state||!Array.isArray(state.users)||state.users.length<1) throw new Error("MIGRATION_SOURCE_STATE_NOT_INSTALLED");
+  const encryption=await verifyMigrationEncryption(state);
+  if(!encryption.verified){
+    console.error("[RASSMIY_MIGRATION_BLOCKED] "+JSON.stringify(encryption));
+    return;
+  }
+  const listing=await source.list();
+  const keys=(listing?.blobs||[]).map(x=>x.key).filter(Boolean);
+  const counts={};
+  for(const k of ["users","pages","articles","leads","media","redirects","revisions","activity"]) counts[k]=Array.isArray(state[k])?state[k].length:0;
+
+  const stageDir=path.join(blobRoot,".migration-stage-"+Date.now());
+  fs.mkdirSync(stageDir,{recursive:true});
+  let totalBytes=0;
+  try{
+    const migratedState=structuredClone(state);
+    migratedState.sessions={};
+    const stateBytes=Buffer.from(JSON.stringify(migratedState),"utf8");
+    fs.writeFileSync(path.join(stageDir,keyEnc("state")+".blob"),stateBytes);
+    totalBytes+=stateBytes.length;
+    try{
+      const sm=await source.getMetadata("state");
+      if(sm?.metadata&&Object.keys(sm.metadata).length) fs.writeFileSync(path.join(stageDir,keyEnc("state")+".meta.json"),JSON.stringify(sm.metadata));
+    }catch{}
+
+    for(const key of keys){
+      if(key==="state") continue;
+      const entry=await source.getWithMetadata(key,{type:"arrayBuffer"});
+      if(!entry||entry.data==null) throw new Error("MIGRATION_BLOB_MISSING:"+key);
+      const bytes=Buffer.from(entry.data);
+      totalBytes+=bytes.length;
+      if(totalBytes>450*1024*1024) throw new Error("MIGRATION_DATA_EXCEEDS_VOLUME_SAFETY_LIMIT");
+      fs.writeFileSync(path.join(stageDir,keyEnc(key)+".blob"),bytes);
+      if(entry.metadata&&Object.keys(entry.metadata).length) fs.writeFileSync(path.join(stageDir,keyEnc(key)+".meta.json"),JSON.stringify(entry.metadata));
+    }
+
+    const staged=fs.readdirSync(stageDir).filter(x=>x.endsWith(".blob")).length;
+    const expected=new Set(["state",...keys]).size;
+    if(staged!==expected) throw new Error("MIGRATION_STAGED_BLOB_COUNT_MISMATCH");
+
+    const destDir=path.join(blobRoot,storeEnc("rassmiy-cms"));
+    const backupRoot=path.join(path.dirname(blobRoot),"rassmiy-backups");
+    fs.mkdirSync(backupRoot,{recursive:true});
+    const backupDir=path.join(backupRoot,"pre-netlify-"+Date.now());
+    let backedUp=false;
+    try{
+      if(fs.existsSync(destDir)){fs.renameSync(destDir,backupDir);backedUp=true;}
+      fs.renameSync(stageDir,destDir);
+    }catch(err){
+      if(backedUp&&!fs.existsSync(destDir)&&fs.existsSync(backupDir)) fs.renameSync(backupDir,destDir);
+      throw err;
+    }
+    const marker={completedAt:new Date().toISOString(),sourceSiteId:MIGRATION_SOURCE_SITE_ID,counts,blobCount:expected,totalBytes,encryption};
+    fs.writeFileSync(MIGRATION_MARKER,JSON.stringify(marker,null,2));
+    console.log("[RASSMIY_MIGRATION_COMPLETE] "+JSON.stringify(marker));
+  }catch(err){
+    try{fs.rmSync(stageDir,{recursive:true,force:true});}catch{}
+    throw err;
+  }
+}
+
+try{await maybeMigrateFromNetlify();}catch(err){console.error("[RASSMIY_MIGRATION_ERROR]",String(err?.stack||err));}
 
 const root=path.resolve("release");
 const port=Number(process.env.PORT||8080);
