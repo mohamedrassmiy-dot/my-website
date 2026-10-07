@@ -24,7 +24,8 @@ export function getStore(input){
   async list(){const d=dir(name);const blobs=fs.readdirSync(d).filter(x=>x.endsWith(".blob")).map(x=>({key:dec(x.slice(0,-5))}));return {blobs,directories:[]}}
  };
 }
-export function getDeployStore(input){ return getStore(input||"deploy"); }\nexport const connectLambda=()=>{};
+export function getDeployStore(input){ return getStore(input||"deploy"); }
+export const connectLambda=()=>{};
 export const connectLocal=()=>{};
 `;
 fs.writeFileSync(netlifyBlobsMain,shim);
