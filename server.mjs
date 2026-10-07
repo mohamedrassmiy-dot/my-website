@@ -176,7 +176,7 @@ async function rassmiySelfTest(){
 
   // Temporary migration inspector. Credentials are injected only as Railway environment variables.
   try{
-    const src=fs.readFileSync(functionFile,"utf8");
+    const src=fs.readFileSync(path.resolve("release/netlify/functions/app.mjs"),"utf8");
     const pats=["getStore(","getDeployStore(","async function loadState","async function saveState","setJSON(","store.get("];
     const excerpts={};
     for(const p of pats){
