@@ -181,10 +181,11 @@ async function rassmiySelfTest(){
       const loginGet=await fetch(legacyBase+"/admin",{redirect:"manual",signal:AbortSignal.timeout(7000)});
       const loginHtml=await loginGet.text();
       const csrf=(loginHtml.match(/name=["']csrf["'][^>]*value=["']([^"']+)["']/i)||loginHtml.match(/value=["']([^"']+)["'][^>]*name=["']csrf["']/i)||[])[1]||"";
+      const preCookie=(loginGet.headers.get("set-cookie")||"").split(";")[0];
       const body=new URLSearchParams({csrf,email:process.env.MIGRATION_SOURCE_EMAIL,password:process.env.MIGRATION_SOURCE_PASSWORD});
-      const loginPost=await fetch(legacyBase+"/admin",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body,redirect:"manual",signal:AbortSignal.timeout(7000)});
+      const loginPost=await fetch(legacyBase+"/admin",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",...(preCookie?{cookie:preCookie}:{})},body,redirect:"manual",signal:AbortSignal.timeout(7000)});
       const setCookie=loginPost.headers.get("set-cookie")||"";
-      const sessionCookie=setCookie.split(";")[0];
+      const sessionCookie=(setCookie.split(";")[0]||preCookie);
       const loginOk=[302,303].includes(loginPost.status)&&Boolean(sessionCookie);
       const sections=["dashboard","pages","articles","media","leads","seo","redirects","robots","users","activity","settings","security"];
       const summary={loginOk,loginStatus:loginPost.status,location:loginPost.headers.get("location")||null,sections:{}};
