@@ -93,6 +93,79 @@ const mime={
   ".txt":"text/plain; charset=utf-8",".webp":"image/webp",".woff2":"font/woff2"
 };
 
+const customCodeFile=process.env.CUSTOM_CODE_FILE||"/data/rassmiy-custom-code.json";
+const CUSTOM_CODE_TYPES=new Set(["html","meta","javascript","css","jsonld"]);
+const CUSTOM_CODE_PLACEMENTS=new Set(["head_start","head_end","body_start","body_end"]);
+const CUSTOM_CODE_SCOPES=new Set(["all","home","ar","en","custom"]);
+const CUSTOM_CODE_ADMIN_ASSET="<style id=\"rassmiy-custom-code-style\">\n#custom-code-manager{margin-top:24px}.cc-warning{padding:12px 14px;border:1px solid #e2b44f;border-radius:10px;background:#fff8e7;line-height:1.6}.cc-toolbar{display:flex;gap:10px;flex-wrap:wrap;margin:14px 0}.cc-item{border:1px solid #dfe7ef;border-radius:14px;padding:16px;margin:14px 0;background:#fff}.cc-row,.cc-grid{display:grid;gap:12px}.cc-row{grid-template-columns:minmax(0,1fr) 140px}.cc-grid{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:12px}.cc-item label{display:grid;gap:6px;font-weight:700}.cc-item input,.cc-item select,.cc-item textarea{width:100%;box-sizing:border-box}.cc-item textarea{resize:vertical}.cc-code{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;direction:ltr;text-align:left;line-height:1.5}.cc-actions{display:flex;justify-content:flex-end;margin-top:10px}.cc-paths{margin-top:12px}.cc-hidden{display:none}.cc-toggle input{width:auto}@media(max-width:760px){.cc-row,.cc-grid{grid-template-columns:1fr}.cc-toolbar>*{flex:1 1 auto}}\n</style>\n<script id=\"rassmiy-custom-code-admin\">\n(()=>{if(window.__RASSMIY_CUSTOM_CODE_ADMIN__)return;window.__RASSMIY_CUSTOM_CODE_ADMIN__=true;\nconst ar=()=>document.documentElement.dir==='rtl'||(document.documentElement.lang||'ar').startsWith('ar');\nconst esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[c]));\nconst L=()=>ar()?{title:'الأكواد المخصصة',sub:'أضف أكواد التحقق وAnalytics وTag Manager وMeta وCSS وJavaScript وحدد مكانها ونطاقها.',add:'إضافة كود',save:'حفظ الأكواد',enabled:'مفعّل',name:'الاسم',type:'نوع الكود',place:'المكان',scope:'النطاق',paths:'المسارات',code:'الكود',del:'حذف',saving:'جاري الحفظ…',saved:'تم الحفظ بنجاح.',warning:'تنبيه: الأكواد المخصصة تُنفذ على الصفحات العامة فقط، ولا يتم حقنها داخل /admin لحماية لوحة التحكم.',pathHelp:'مثال: /ar/* أو /en/contact.html — افصل بين المسارات بفاصلة أو سطر جديد.',types:{html:'HTML',meta:'Meta Tag',javascript:'JavaScript',css:'CSS',jsonld:'JSON-LD'},places:{head_start:'بداية <head>',head_end:'قبل </head>',body_start:'بعد <body>',body_end:'قبل </body>'},scopes:{all:'كل الصفحات',home:'الرئيسية فقط',ar:'العربية',en:'الإنجليزية',custom:'مسارات مخصصة'}}:{title:'Custom Code',sub:'Add verification, analytics, Tag Manager, meta, CSS or JavaScript and choose placement and scope.',add:'Add code',save:'Save codes',enabled:'Enabled',name:'Name',type:'Code type',place:'Placement',scope:'Scope',paths:'Paths',code:'Code',del:'Delete',saving:'Saving…',saved:'Saved successfully.',warning:'Custom code runs on public pages only and is never injected into /admin to protect the CMS.',pathHelp:'Example: /ar/* or /en/contact.html — separate paths with commas or new lines.',types:{html:'HTML',meta:'Meta Tag',javascript:'JavaScript',css:'CSS',jsonld:'JSON-LD'},places:{head_start:'Start of <head>',head_end:'Before </head>',body_start:'After <body>',body_end:'Before </body>'},scopes:{all:'All pages',home:'Homepage only',ar:'Arabic',en:'English',custom:'Custom paths'}};\nlet rows=[];\nconst options=(o,v)=>Object.entries(o).map(([k,t])=>'<option value=\"'+esc(k)+'\" '+(k===v?'selected':'')+'>'+esc(t)+'</option>').join('');\nconst item=(x,i)=>{const l=L();return '<article class=\"cc-item\" data-i=\"'+i+'\"><div class=\"cc-row\"><label><span>'+l.name+'</span><input data-f=\"name\" maxlength=\"160\" value=\"'+esc(x.name||'')+'\"></label><label class=\"cc-toggle\"><span>'+l.enabled+'</span><input type=\"checkbox\" data-f=\"enabled\" '+(x.enabled!==false?'checked':'')+'></label></div><div class=\"cc-grid\"><label><span>'+l.type+'</span><select data-f=\"type\">'+options(l.types,x.type||'meta')+'</select></label><label><span>'+l.place+'</span><select data-f=\"placement\">'+options(l.places,x.placement||'head_end')+'</select></label><label><span>'+l.scope+'</span><select data-f=\"scope\">'+options(l.scopes,x.scope||'all')+'</select></label></div><label class=\"cc-paths '+((x.scope||'all')==='custom'?'':'cc-hidden')+'\"><span>'+l.paths+'</span><textarea data-f=\"paths\" rows=\"2\" placeholder=\"/ar/*\">'+esc(x.paths||'')+'</textarea><small>'+l.pathHelp+'</small></label><label><span>'+l.code+'</span><textarea class=\"cc-code\" data-f=\"code\" rows=\"8\" spellcheck=\"false\" placeholder=\"&lt;meta name=&quot;google-site-verification&quot; content=&quot;...&quot;&gt;\">'+esc(x.code||'')+'</textarea></label><div class=\"cc-actions\"><button type=\"button\" class=\"danger-btn\" data-del=\"'+i+'\">'+l.del+'</button></div></article>'};\nfunction sync(){document.querySelectorAll('.cc-item').forEach((el,i)=>{const x=rows[i]||{};el.querySelectorAll('[data-f]').forEach(inp=>x[inp.dataset.f]=inp.type==='checkbox'?inp.checked:inp.value);rows[i]=x;});}\nfunction render(){const box=document.querySelector('[data-cc-list]');if(box)box.innerHTML=rows.map(item).join('');}\nasync function save(){sync();const s=document.querySelector('[data-cc-status]');s.textContent=L().saving;const r=await fetch('/api/custom-code-admin',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json','x-requested-with':'RassmiyAdmin'},body:JSON.stringify({snippets:rows})});if(!r.ok)throw new Error('Save failed: '+r.status);s.textContent=L().saved;}\nasync function init(){if(!location.pathname.startsWith('/admin'))return;const q=new URLSearchParams(location.search),section=q.get('section')||'dashboard';if(!['settings','seo'].includes(section))return;const main=document.querySelector('.cms-main');if(!main||document.getElementById('custom-code-manager'))return;const l=L();const sec=document.createElement('section');sec.className='panel';sec.id='custom-code-manager';sec.innerHTML='<div class=\"panel-head\"><div><h2>'+l.title+'</h2><p>'+l.sub+'</p></div></div><p class=\"cc-warning\">'+l.warning+'</p><div class=\"cc-toolbar\"><button type=\"button\" class=\"secondary-btn\" data-cc-add>'+l.add+'</button><button type=\"button\" class=\"primary-btn\" data-cc-save>'+l.save+'</button></div><div data-cc-list></div><p data-cc-status class=\"muted\"></p>';main.appendChild(sec);try{const r=await fetch('/api/custom-code-admin',{credentials:'same-origin',cache:'no-store'});if(r.ok){const d=await r.json();rows=Array.isArray(d.snippets)?d.snippets:[];}}catch{}render();sec.addEventListener('input',e=>{if(e.target.matches('[data-f]'))sync();});sec.addEventListener('change',e=>{if(e.target.matches('[data-f=\"scope\"]')){sync();render();}});sec.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.matches('[data-cc-add]')){sync();rows.push({id:'snippet-'+Date.now(),name:ar()?'كود جديد':'New code',enabled:true,type:'meta',placement:'head_end',scope:'all',paths:'',code:''});render();return;}if(b.matches('[data-cc-save]')){save().catch(err=>document.querySelector('[data-cc-status]').textContent=err.message);return;}if(b.dataset.del!=null){sync();rows.splice(Number(b.dataset.del),1);render();}});if(q.get('custom_code')==='1')setTimeout(()=>sec.scrollIntoView({behavior:'smooth'}),100);}\ndocument.readyState==='loading'?document.addEventListener('DOMContentLoaded',init):init();\n})();\n</script>";
+function normalizeCustomCode(input){
+  const list=Array.isArray(input)?input:[];
+  if(list.length>40)throw Object.assign(new Error("too many snippets"),{statusCode:400});
+  return list.map((x,i)=>{
+    const type=CUSTOM_CODE_TYPES.has(String(x?.type||""))?String(x.type):"html";
+    const placement=CUSTOM_CODE_PLACEMENTS.has(String(x?.placement||""))?String(x.placement):"head_end";
+    const scope=CUSTOM_CODE_SCOPES.has(String(x?.scope||""))?String(x.scope):"all";
+    return {id:String(x?.id||("snippet-"+i)).slice(0,100),name:String(x?.name||("Custom code "+(i+1))).slice(0,160),enabled:x?.enabled!==false,type,placement,scope,paths:String(x?.paths||"").slice(0,4000),code:String(x?.code||"").slice(0,50000)};
+  });
+}
+function readCustomCode(){try{return normalizeCustomCode(JSON.parse(fs.readFileSync(customCodeFile,"utf8")));}catch{return []}}
+function writeCustomCode(items){fs.mkdirSync(path.dirname(customCodeFile),{recursive:true});const tmp=customCodeFile+".tmp";fs.writeFileSync(tmp,JSON.stringify(normalizeCustomCode(items),null,2));fs.renameSync(tmp,customCodeFile);}
+function customScopeMatch(item,pathname){
+  const p=String(pathname||"/"),scope=String(item.scope||"all");
+  if(scope==="all")return true;
+  if(scope==="home")return ["/","/index.html","/ar/","/ar/index.html","/en/","/en/index.html"].includes(p);
+  if(scope==="ar")return p==="/ar"||p.startsWith("/ar/");
+  if(scope==="en")return p==="/en"||p.startsWith("/en/");
+  if(scope==="custom"){
+    const rules=String(item.paths||"").split(/[\n,]+/).map(x=>x.trim()).filter(Boolean);
+    return rules.some(rule=>rule==="*"||(rule.endsWith("*")&&p.startsWith(rule.slice(0,-1)))||(rule.endsWith("/")&&p.startsWith(rule))||p===rule);
+  }
+  return false;
+}
+function renderCustomSnippet(item){
+  const raw=String(item.code||"");if(!raw)return "";
+  if(item.type==="javascript")return /<script\b/i.test(raw)?raw:"<script>"+raw+"</"+"script>";
+  if(item.type==="css")return /<style\b/i.test(raw)?raw:"<style>"+raw+"</"+"style>";
+  if(item.type==="jsonld")return /<script\b/i.test(raw)?raw:'<script type="application/ld+json">'+raw+"</"+"script>";
+  return raw;
+}
+async function injectCustomCode(html,pathname){
+  if(!html||pathname.startsWith("/admin")||pathname.startsWith("/api/")||pathname==="/install")return html;
+  const bins={head_start:[],head_end:[],body_start:[],body_end:[]};
+  for(const item of readCustomCode())if(item.enabled!==false&&customScopeMatch(item,pathname))bins[item.placement].push(renderCustomSnippet(item));
+  let out=html;
+  const hs=bins.head_start.filter(Boolean).join("\n"),he=bins.head_end.filter(Boolean).join("\n"),bs=bins.body_start.filter(Boolean).join("\n"),be=bins.body_end.filter(Boolean).join("\n");
+  if(hs)out=out.replace(/<head([^>]*)>/i,m=>m+"\n"+hs);
+  if(he)out=out.replace(/<\/head>/i,he+"\n</head>");
+  if(bs)out=out.replace(/<body([^>]*)>/i,m=>m+"\n"+bs);
+  if(be)out=out.replace(/<\/body>/i,be+"\n</body>");
+  return out;
+}
+async function cmsAdminAuthenticated(req){
+  try{
+    const handler=app.handler||app.default;if(typeof handler!=="function")return false;
+    const proto=String(req.headers["x-forwarded-proto"]||"https").split(",")[0].trim();
+    const host=req.headers.host||"rassmiy-marketing.up.railway.app";
+    const h=new Headers();if(req.headers.cookie)h.set("cookie",String(req.headers.cookie));if(req.headers["user-agent"])h.set("user-agent",String(req.headers["user-agent"]));
+    const out=await handler(new Request(proto+"://"+host+"/admin?section=settings",{headers:h}),{});
+    if(!(out instanceof Response)||out.status!==200)return false;
+    const body=await out.text();
+    return /class=["'][^"']*cms-main/i.test(body)&&!/name=["']password["']/i.test(body);
+  }catch{return false}
+}
+function customAdminOriginAllowed(req){
+  const origin=String(req.headers.origin||"").trim();if(!origin)return true;
+  const proto=String(req.headers["x-forwarded-proto"]||"https").split(",")[0].trim(),host=req.headers.host||"";
+  return origin===proto+"://"+host;
+}
+function injectCustomCodeAdminUi(html,pathname,search){
+  if(pathname!=="/admin")return html;
+  const section=new URLSearchParams(search||"").get("section")||"dashboard";
+  if(section!=="settings"&&section!=="seo")return html;
+  if(html.includes("rassmiy-custom-code-admin"))return html;
+  return html.replace(/<\/body>/i,CUSTOM_CODE_ADMIN_ASSET+"</body>");
+}
+
 function safeFile(urlPath){
   let p=decodeURIComponent(urlPath.split("?")[0]);
   if(p==="/") p="/index.html";
