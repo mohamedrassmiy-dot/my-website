@@ -1,0 +1,18 @@
+name: Netlify migration debug
+on:
+  push:
+    branches:
+      - railway-state-export-v2
+jobs:
+  netlify-debug:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install project dependencies
+        run: npm ci
+      - name: Reproduce Netlify build
+        run: npx --yes netlify-cli@latest build --context deploy-preview
