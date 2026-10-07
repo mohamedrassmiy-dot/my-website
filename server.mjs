@@ -155,7 +155,7 @@ async function cmsAdminAuthenticated(req){
   try{
     const handler=app.handler||app.default;if(typeof handler!=="function")return false;
     const proto=String(req.headers["x-forwarded-proto"]||"https").split(",")[0].trim();
-    const host=req.headers.host||"rassmiy-marketing.up.railway.app";
+    const host=String(req.headers["x-forwarded-host"]||req.headers.host||"rassmiy-marketing.up.railway.app").split(",")[0].trim();
     const h=new Headers();if(req.headers.cookie)h.set("cookie",String(req.headers.cookie));if(req.headers["user-agent"])h.set("user-agent",String(req.headers["user-agent"]));
     const out=await handler(new Request(proto+"://"+host+"/admin?section=settings",{headers:h}),{});
     if(!(out instanceof Response)||out.status!==200)return false;
@@ -406,7 +406,7 @@ async function productionSelfTest(base){
   const tests=[];
   async function check(name,p,allowed){
     try{
-      const r=await fetch(base+p,{redirect:"manual"});
+      const r=await fetch(base+p,{redirect:"manual",headers:{"x-forwarded-host":"rassmiy-marketing.up.railway.app","x-forwarded-proto":"https"}});
       const item={name,path:p,status:r.status,location:r.headers.get("location")||null,ok:allowed.includes(r.status)};
       if(p==="/"&&r.status===200){
         const html=await r.text();
@@ -433,7 +433,7 @@ async function productionSelfTest(base){
   await check("robots","/robots.txt",[200]);
   await check("sitemap","/sitemap.xml",[200]);
   try{
-    const sr=await fetch(base+"/sitemap.xml",{redirect:"manual",cache:"no-store"});
+    const sr=await fetch(base+"/sitemap.xml",{redirect:"manual",cache:"no-store",headers:{"x-forwarded-host":"rassmiy-marketing.up.railway.app","x-forwarded-proto":"https"}});
     const sx=await sr.text();
     const locs=[...sx.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]);
     const foreign=locs.filter(u=>!u.startsWith(PUBLIC_ORIGIN+"/"));
