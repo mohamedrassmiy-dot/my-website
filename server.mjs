@@ -175,6 +175,19 @@ async function rassmiySelfTest(){
   }
 
   // Temporary migration inspector. Credentials are injected only as Railway environment variables.
+  try{
+    const src=fs.readFileSync(functionFile,"utf8");
+    const pats=["getStore(","getDeployStore(","async function loadState","async function saveState","setJSON(","store.get("];
+    const excerpts={};
+    for(const p of pats){
+      const i=src.indexOf(p);
+      if(i>=0) excerpts[p]=src.slice(Math.max(0,i-450),Math.min(src.length,i+1400)).replace(/\s+/g," ");
+    }
+    console.log("[RASSMIY_APP_STORAGE_DIAG] "+JSON.stringify(excerpts));
+  }catch(err){
+    console.log("[RASSMIY_APP_STORAGE_DIAG] "+JSON.stringify({error:String(err?.message||err)}));
+  }
+
   if(process.env.MIGRATION_SOURCE_EMAIL && process.env.MIGRATION_SOURCE_PASSWORD){
     try{
       const legacyBase="https://rassmiy-marketing.netlify.app";
