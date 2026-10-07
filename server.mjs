@@ -85,6 +85,8 @@ fs.writeFileSync(netlifyBlobsMain,shim);
 
 const app=await import("./release/netlify/functions/app.mjs");
 const root=path.resolve("release");
+const googleSitemapPath=path.resolve("sitemap-google.xml");
+const googleRobotsText="User-agent: *\nAllow: /\nDisallow: /admin\nDisallow: /api/\nSitemap: https://rassmiy-marketing.up.railway.app/sitemap.xml\n";
 const googleVerificationFiles={
   "/googlef284124f6e4cc6fb.html":"google-site-verification: googlef284124f6e4cc6fb.html\n",
   "/google5f2aa36fd981433f.html":"google-site-verification: google5f2aa36fd981433f.html\n"
@@ -295,6 +297,24 @@ const server=http.createServer(async(req,res)=>{
   try{
     const reqUrlObj=new URL(req.url,"http://local");
     const pathname=reqUrlObj.pathname;
+    if(pathname==="/sitemap.xml"||pathname==="/sitemap-google.xml"){
+      if(!fs.existsSync(googleSitemapPath)){res.statusCode=503;res.setHeader("Content-Type","text/plain; charset=utf-8");res.end("Sitemap unavailable");return;}
+      const xml=fs.readFileSync(googleSitemapPath,"utf8");
+      res.statusCode=200;
+      res.setHeader("Content-Type","application/xml; charset=utf-8");
+      res.setHeader("Cache-Control","public, max-age=300");
+      res.setHeader("Content-Length",Buffer.byteLength(xml));
+      res.end(xml);
+      return;
+    }
+    if(pathname==="/robots.txt"){
+      res.statusCode=200;
+      res.setHeader("Content-Type","text/plain; charset=utf-8");
+      res.setHeader("Cache-Control","public, max-age=300");
+      res.setHeader("Content-Length",Buffer.byteLength(googleRobotsText));
+      res.end(googleRobotsText);
+      return;
+    }
     if(pathname==="/api/custom-code-admin"){
       if(!customAdminOriginAllowed(req)){res.statusCode=403;res.end("Forbidden");return;}
       if(!(await cmsAdminAuthenticated(req))){res.statusCode=401;res.end("Unauthorized");return;}
@@ -432,6 +452,7 @@ async function productionSelfTest(base){
   await check("english-home","/en/index.html",[200]);
   await check("robots","/robots.txt",[200]);
   await check("sitemap","/sitemap.xml",[200]);
+  await check("sitemap-google-clean","/sitemap-google.xml",[200]);
   try{
     const sr=await fetch(base+"/sitemap.xml",{redirect:"manual",cache:"no-store",headers:{"x-forwarded-host":"rassmiy-marketing.up.railway.app","x-forwarded-proto":"https"}});
     const sx=await sr.text();
