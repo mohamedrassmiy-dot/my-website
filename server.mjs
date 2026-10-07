@@ -100,4 +100,39 @@ const server=http.createServer(async(req,res)=>{
     await runFunction(req,res); return;
   }catch(err){console.error(err);res.statusCode=500;res.setHeader("Content-Type","application/json; charset=utf-8");res.end(JSON.stringify({error:"server_error"}));}
 });
-server.listen(port,"0.0.0.0",()=>console.log("Rassmiy CMS listening on",port));
+async function rassmiySelfTest(){
+  const base="http://127.0.0.1:"+port;
+  const tests=[];
+  async function check(name,p,allowed){
+    try{
+      const r=await fetch(base+p,{redirect:"manual"});
+      const item={name,path:p,status:r.status,location:r.headers.get("location")||null,ok:allowed.includes(r.status)};
+      if(p==="/api/content-cards" && r.status===200){
+        try{const j=await r.json();item.cards=Array.isArray(j?.cards)?j.cards.length:-1;item.ok=item.ok&&item.cards>0;}catch{item.cards=-1;item.ok=false;}
+      }else{await r.arrayBuffer();}
+      tests.push(item);return item;
+    }catch(err){const item={name,path:p,status:0,ok:false,error:String(err?.message||err)};tests.push(item);return item;}
+  }
+  let volumeWrite=false;
+  try{
+    const probe=path.join(blobRoot,".railway-selftest");
+    fs.writeFileSync(probe,"ok-"+Date.now());
+    volumeWrite=fs.readFileSync(probe,"utf8").startsWith("ok-");
+    fs.unlinkSync(probe);
+  }catch{}
+  await check("homepage","/",[200]);
+  await check("content-cards","/api/content-cards",[200]);
+  await check("site-js","/assets/site.js",[200]);
+  const admin=await check("admin-entry","/admin",[200,302,303,307,308]);
+  if(admin.location){
+    const target=new URL(admin.location,base).pathname;
+    if(target==="/install") await check("install-page","/install",[200]);
+  }
+  const critical=tests.filter(x=>["homepage","content-cards","site-js","install-page"].includes(x.name));
+  const ok=volumeWrite && critical.every(x=>x.ok) && admin.ok;
+  console.log("[RASSMIY_SELFTEST] "+JSON.stringify({ok,volumeWrite,tests}));
+}
+server.listen(port,"0.0.0.0",()=>{
+  console.log("Rassmiy CMS listening on",port);
+  setTimeout(()=>rassmiySelfTest().catch(err=>console.error("[RASSMIY_SELFTEST_ERROR]",err)),600);
+});
