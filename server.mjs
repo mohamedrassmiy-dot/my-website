@@ -156,6 +156,17 @@ async function runFunction(req,res){
 const server=http.createServer(async(req,res)=>{
   try{
     const pathname=new URL(req.url,"http://local").pathname;
+    const googleVerificationFiles={
+      "/googlef284124f6e4cc6fb.html":"google-site-verification: googlef284124f6e4cc6fb.html\n",
+      "/google5f2aa36fd981433f.html":"google-site-verification: google5f2aa36fd981433f.html\n"
+    };
+    if(Object.prototype.hasOwnProperty.call(googleVerificationFiles,pathname)){
+      res.statusCode=200;
+      res.setHeader("Content-Type","text/html; charset=utf-8");
+      res.setHeader("Cache-Control","public, max-age=300");
+      res.end(googleVerificationFiles[pathname]);
+      return;
+    }
     if(["/favicon","/favicon.ico","/apple-touch-icon.png","/apple-touch-icon-precomposed.png"].includes(pathname)){
       const brandIcon=path.join(root,"assets","logo.jpg");
       if(fs.existsSync(brandIcon)){sendFile(res,brandIcon);return;}
@@ -257,6 +268,8 @@ async function productionSelfTest(base){
   await check("robots","/robots.txt",[200]);
   await check("sitemap","/sitemap.xml",[200]);
   await check("favicon","/favicon.ico",[200]);
+  await check("gsc-file-1","/googlef284124f6e4cc6fb.html",[200]);
+  await check("gsc-file-2","/google5f2aa36fd981433f.html",[200]);
   await check("api-health","/api/health",[200]);
   await check("content-cards","/api/content-cards",[200]);
   await check("site-js","/assets/site.js",[200]);
