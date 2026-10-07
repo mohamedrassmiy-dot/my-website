@@ -14,7 +14,27 @@ jobs:
           node-version: '22'
       - name: Install project dependencies
         run: npm ci
-      - name: Reproduce Netlify build
-        env:
-          NETLIFY_SITE_ID: dbf13d3b-88e6-4396-ae96-4adb2ab937a8
-        run: npx --yes netlify-cli@latest build --context deploy-preview
+      - name: Generate exact Netlify release
+        run: |
+          python3 - <<'PY'
+          import tomllib, subprocess
+          with open('netlify.toml','rb') as f:
+              cfg=tomllib.load(f)
+          subprocess.run(cfg['build']['command'], shell=True, check=True)
+          PY
+      - name: Bundle functions with Netlify ZISI
+        run: |
+          npm install --no-save @netlify/zip-it-and-ship-it@latest
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          import { zipFunctions } from '@netlify/zip-it-and-ship-it';
+          fs.mkdirSync('.netlify/functions-bundled',{recursive:true});
+          const out=await zipFunctions('release/netlify/functions','.netlify/functions-bundled',{
+            basePath:process.cwd(),
+            config:{
+              app:{nodeBundler:'esbuild'},
+              'migration-export':{nodeBundler:'esbuild'}
+            }
+          });
+          console.log(JSON.stringify(out,null,2));
+          JS
