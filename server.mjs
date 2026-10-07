@@ -2,16 +2,32 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-// Railway compatibility: emulate the small Netlify Blobs surface used by the CMS with durable /data storage.
-const blobDir=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
-fs.mkdirSync(blobDir,{recursive:true});
-const blobFile=(key)=>path.join(blobDir,Buffer.from(String(key)).toString("base64url")+".blob");
-globalThis.netlifyBlobsContext={
-  deployID:"railway",
-  siteID:"rassmiy-marketing",
-  token:"railway-local-storage"
-};
-process.env.NETLIFY_BLOBS_CONTEXT=JSON.stringify(globalThis.netlifyBlobsContext);
+// Railway compatibility: replace Netlify Blobs with durable local storage on the mounted Railway volume.
+const blobRoot=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
+fs.mkdirSync(blobRoot,{recursive:true});
+const netlifyBlobsMain=path.resolve("node_modules/@netlify/blobs/dist/main.js");
+const shim=String.raw`
+import fs from "node:fs"; import path from "node:path"; import crypto from "node:crypto";
+const root=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
+const enc=s=>Buffer.from(String(s)).toString("base64url"), dec=s=>Buffer.from(s,"base64url").toString();
+const dir=n=>{const d=path.join(root,enc(n||"default"));fs.mkdirSync(d,{recursive:true});return d};
+const file=(n,k)=>path.join(dir(n),enc(k)+".blob");
+const meta=(n,k)=>path.join(dir(n),enc(k)+".meta.json");
+export function getStore(input){
+ const name=typeof input==="string"?input:(input?.name||"default");
+ return {
+  async get(key,opts={}){const f=file(name,key);if(!fs.existsSync(f))return null;const b=fs.readFileSync(f);if(opts?.type==="json")return JSON.parse(b.toString("utf8"));if(opts?.type==="arrayBuffer")return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);if(opts?.type==="blob")return new Blob([b]);if(opts?.type==="stream")return fs.createReadStream(f);return b.toString("utf8")},
+  async set(key,value,opts={}){const b=Buffer.isBuffer(value)?value:value instanceof Uint8Array?Buffer.from(value):Buffer.from(typeof value==="string"?value:JSON.stringify(value));fs.writeFileSync(file(name,key),b);if(opts?.metadata)fs.writeFileSync(meta(name,key),JSON.stringify(opts.metadata));return {etag:crypto.createHash("sha1").update(b).digest("hex"),modified:new Date()}},
+  async setJSON(key,value,opts={}){return this.set(key,JSON.stringify(value),opts)},
+  async delete(key){for(const f of [file(name,key),meta(name,key)])try{fs.unlinkSync(f)}catch{}},
+  async getMetadata(key){const f=meta(name,key);return fs.existsSync(f)?JSON.parse(fs.readFileSync(f,"utf8")):null},
+  async list(){const d=dir(name);const blobs=fs.readdirSync(d).filter(x=>x.endsWith(".blob")).map(x=>({key:dec(x.slice(0,-5))}));return {blobs,directories:[]}}
+ };
+}
+export const connectLambda=()=>{};
+export const connectLocal=()=>{};
+`;
+fs.writeFileSync(netlifyBlobsMain,shim);
 const app = await import("./release/netlify/functions/app.mjs");
 
 const root=path.resolve("release");
