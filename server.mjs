@@ -96,7 +96,8 @@ const server=http.createServer(async(req,res)=>{
     if(pathname.startsWith("/api/")||pathname.startsWith("/admin")){
       await runFunction(req,res); return;
     }
-    const f=safeFile(pathname); if(f){sendFile(res,f);return;}\n    await runFunction(req,res); return;
+    const f=safeFile(pathname); if(f){sendFile(res,f);return;}
+    await runFunction(req,res); return;
   }catch(err){console.error(err);res.statusCode=500;res.setHeader("Content-Type","application/json; charset=utf-8");res.end(JSON.stringify({error:"server_error"}));}
 });
 server.listen(port,"0.0.0.0",()=>console.log("Rassmiy CMS listening on",port));
