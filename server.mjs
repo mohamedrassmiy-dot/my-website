@@ -186,6 +186,17 @@ function safeFile(urlPath){
   }
   return null;
 }
+const PUBLIC_ORIGIN="https://rassmiy-marketing.up.railway.app";
+const LEGACY_PUBLIC_ORIGINS=[
+  "https://rassmiy-marketing.netlify.app",
+  "http://rassmiy-marketing.netlify.app"
+];
+function rewritePublicOriginText(value){
+  let out=String(value??"");
+  for(const legacy of LEGACY_PUBLIC_ORIGINS) out=out.split(legacy).join(PUBLIC_ORIGIN);
+  return out;
+}
+
 function injectGoogleVerification(html){
   const token=String(process.env.GOOGLE_SITE_VERIFICATION||"").trim();
   if(!token) return html;
@@ -200,11 +211,20 @@ async function sendFile(res,f,pathname="/"){
   const type=mime[path.extname(f).toLowerCase()]||"application/octet-stream";
   res.setHeader("Content-Type",type);
   if(f.includes(path.sep+"admin"+path.sep)||f.endsWith(path.sep+"admin.html")) res.setHeader("Cache-Control","no-store, max-age=0");
-  if(path.extname(f).toLowerCase()===".html"){
-    let html=fs.readFileSync(f,"utf8");
-    html=injectGoogleVerification(html);
-    html=await injectCustomCode(html,pathname);
-    res.end(html);
+  const ext=path.extname(f).toLowerCase();
+  if([".html",".xml",".txt"].includes(ext)){
+    let text=fs.readFileSync(f,"utf8");
+    text=rewritePublicOriginText(text);
+    if(ext===".html"){
+      text=injectGoogleVerification(text);
+      text=await injectCustomCode(text,pathname);
+    }
+    if(pathname==="/sitemap.xml"){
+      res.setHeader("Content-Type","application/xml; charset=utf-8");
+      res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
+    }
+    if(pathname==="/robots.txt") res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
+    res.end(text);
     return;
   }
   fs.createReadStream(f).pipe(res);
@@ -245,13 +265,21 @@ async function runFunction(req,res){
     const ab=await out.arrayBuffer();
     let payload=Buffer.from(ab);
     const parsedReqUrl=new URL(reqUrl);
-    const ct=String(out.headers.get("content-type")||"");
-    if(ct.includes("text/html")){
-      let html=payload.toString("utf8");
-      html=injectCustomCodeAdminUi(html,parsedReqUrl.pathname,parsedReqUrl.search);
-      html=injectGoogleVerification(html);
-      html=await injectCustomCode(html,parsedReqUrl.pathname);
-      payload=Buffer.from(html);
+    const ct=String(out.headers.get("content-type")||"").toLowerCase();
+    const isTextual=ct.includes("text/html")||ct.includes("application/xml")||ct.includes("text/xml")||ct.includes("text/plain");
+    if(isTextual){
+      let text=rewritePublicOriginText(payload.toString("utf8"));
+      if(ct.includes("text/html")){
+        text=injectCustomCodeAdminUi(text,parsedReqUrl.pathname,parsedReqUrl.search);
+        text=injectGoogleVerification(text);
+        text=await injectCustomCode(text,parsedReqUrl.pathname);
+      }
+      if(parsedReqUrl.pathname==="/sitemap.xml"){
+        res.setHeader("Content-Type","application/xml; charset=utf-8");
+        res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
+      }
+      if(parsedReqUrl.pathname==="/robots.txt") res.setHeader("Cache-Control","no-store, no-cache, must-revalidate");
+      payload=Buffer.from(text);
     }
     res.end(payload);
     return;
@@ -404,6 +432,13 @@ async function productionSelfTest(base){
   await check("english-home","/en/index.html",[200]);
   await check("robots","/robots.txt",[200]);
   await check("sitemap","/sitemap.xml",[200]);
+  try{
+    const sr=await fetch(base+"/sitemap.xml",{redirect:"manual",cache:"no-store"});
+    const sx=await sr.text();
+    const locs=[...sx.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]);
+    const foreign=locs.filter(u=>!u.startsWith(PUBLIC_ORIGIN+"/"));
+    tests.push({name:"sitemap-hosts",path:"/sitemap.xml",status:sr.status,ok:sr.status===200&&locs.length>0&&foreign.length===0,urlCount:locs.length,foreignCount:foreign.length});
+  }catch(err){tests.push({name:"sitemap-hosts",path:"/sitemap.xml",status:0,ok:false,error:String(err?.message||err)});}
   await check("favicon","/favicon.ico",[200]);
   await check("gsc-file-1","/googlef284124f6e4cc6fb.html",[200]);
   await check("gsc-file-2","/google5f2aa36fd981433f.html",[200]);
