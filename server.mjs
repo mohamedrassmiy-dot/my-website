@@ -90,6 +90,10 @@ async function runFunction(req,res){
 const server=http.createServer(async(req,res)=>{
   try{
     const pathname=new URL(req.url,"http://local").pathname;
+    if(["/favicon","/favicon.ico","/apple-touch-icon.png","/apple-touch-icon-precomposed.png"].includes(pathname)){
+      const brandIcon=path.join(root,"assets","logo.jpg");
+      if(fs.existsSync(brandIcon)){sendFile(res,brandIcon);return;}
+    }
     if(!pathname.startsWith("/api/")&&!pathname.startsWith("/admin")){
       const f=safeFile(pathname); if(f){sendFile(res,f);return;}
     }
@@ -109,6 +113,8 @@ async function rassmiySelfTest(){
       const item={name,path:p,status:r.status,location:r.headers.get("location")||null,ok:allowed.includes(r.status)};
       if(p==="/api/content-cards" && r.status===200){
         try{const j=await r.json();item.cards=Array.isArray(j?.cards)?j.cards.length:-1;item.ok=item.ok&&item.cards>0;}catch{item.cards=-1;item.ok=false;}
+      }else if(p==="/api/health" && r.status===200){
+        try{const j=await r.json();item.installed=Boolean(j?.installed);}catch{item.ok=false;}
       }else{await r.arrayBuffer();}
       tests.push(item);return item;
     }catch(err){const item={name,path:p,status:0,ok:false,error:String(err?.message||err)};tests.push(item);return item;}
@@ -121,6 +127,12 @@ async function rassmiySelfTest(){
     fs.unlinkSync(probe);
   }catch{}
   await check("homepage","/",[200]);
+  await check("arabic-home","/ar/index.html",[200]);
+  await check("english-home","/en/index.html",[200]);
+  await check("robots","/robots.txt",[200]);
+  await check("sitemap","/sitemap.xml",[200]);
+  await check("favicon","/favicon.ico",[200]);
+  await check("api-health","/api/health",[200]);
   await check("content-cards","/api/content-cards",[200]);
   await check("site-js","/assets/site.js",[200]);
   const admin=await check("admin-entry","/admin",[200,302,303,307,308]);
@@ -128,7 +140,7 @@ async function rassmiySelfTest(){
     const target=new URL(admin.location,base).pathname;
     if(target==="/install") await check("install-page","/install",[200]);
   }
-  const critical=tests.filter(x=>["homepage","content-cards","site-js","install-page"].includes(x.name));
+  const critical=tests.filter(x=>["homepage","arabic-home","english-home","robots","sitemap","favicon","api-health","content-cards","site-js","install-page"].includes(x.name));
   const ok=volumeWrite && critical.every(x=>x.ok) && admin.ok;
   console.log("[RASSMIY_SELFTEST] "+JSON.stringify({ok,volumeWrite,tests}));
   try{
