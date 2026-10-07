@@ -15,4 +15,6 @@ jobs:
       - name: Install project dependencies
         run: npm ci
       - name: Reproduce Netlify build
+        env:
+          NETLIFY_SITE_ID: dbf13d3b-88e6-4396-ae96-4adb2ab937a8
         run: npx --yes netlify-cli@latest build --context deploy-preview
