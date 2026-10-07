@@ -150,13 +150,25 @@ async function rassmiySelfTest(){
     const legacyAdmin=await fetch(legacyBase+"/admin",{redirect:"manual",signal:AbortSignal.timeout(5000)});
     const cardsRes=await fetch(legacyBase+"/api/content-cards",{redirect:"manual",signal:AbortSignal.timeout(5000)});
     let cardsCount=null;try{const j=await cardsRes.json();cardsCount=Array.isArray(j?.cards)?j.cards.length:null;}catch{}
+    const adminHtml=await legacyAdmin.text();
+    const csrfName=(adminHtml.match(/name=["']([^"']*csrf[^"']*)["']/i)||[])[1]||null;
+    const formAction=(adminHtml.match(/<form[^>]+action=["']([^"']+)["']/i)||[])[1]||null;
+    const loginInputs=[...adminHtml.matchAll(/<input[^>]+name=["']([^"']+)["']/gi)].map(m=>m[1]).filter(Boolean);
+    let endpointHints=[];
+    try{
+      const aj=await fetch(legacyBase+"/assets/admin.js",{signal:AbortSignal.timeout(5000)});
+      const js=await aj.text();
+      endpointHints=[...new Set([...js.matchAll(/\/(?:api|admin)\/[A-Za-z0-9_?=&.%/-]+/g)].map(m=>m[0]))].slice(0,80);
+    }catch{}
     console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({
       healthStatus:health.status,
       installed:healthJson?.installed??null,
       adminStatus:legacyAdmin.status,
       adminLocation:legacyAdmin.headers.get("location")||null,
       cardsStatus:cardsRes.status,
-      cardsCount
+      cardsCount,
+      loginForm:{action:formAction,csrfName,inputNames:[...new Set(loginInputs)]},
+      endpointHints
     }));
   }catch(err){
     console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({error:String(err?.message||err)}));
