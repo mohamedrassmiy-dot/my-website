@@ -90,6 +90,16 @@ async function runFunction(req,res){
 const server=http.createServer(async(req,res)=>{
   try{
     const pathname=new URL(req.url,"http://local").pathname;
+    if(pathname==="/api/migration/probe-7f3a9d2c81e64b27"){
+      if(req.method!=="POST"){res.statusCode=405;res.end("Method Not Allowed");return;}
+      let size=0;const parts=[];
+      for await (const chunk of req){size+=chunk.length;if(size>4096){res.statusCode=413;res.end("Too Large");return;}parts.push(chunk);}
+      let raw={};try{raw=JSON.parse(Buffer.concat(parts).toString("utf8")||"{}");}catch{res.statusCode=400;res.end("Bad JSON");return;}
+      const counts={};for(const [k,v] of Object.entries(raw.counts||{})){if(typeof v==="number"&&Number.isFinite(v))counts[String(k).slice(0,40)]=v;}
+      const payload={stateFound:Boolean(raw.stateFound),installed:raw.installed===true,blobCount:Number.isFinite(raw.blobCount)?raw.blobCount:null,counts,error:raw.error?String(raw.error).slice(0,500):null,at:new Date().toISOString()};
+      console.log("[NETLIFY_BLOB_PROBE] "+JSON.stringify(payload));
+      res.statusCode=204;res.setHeader("Cache-Control","no-store");res.end();return;
+    }
     if(["/favicon","/favicon.ico","/apple-touch-icon.png","/apple-touch-icon-precomposed.png"].includes(pathname)){
       const brandIcon=path.join(root,"assets","logo.jpg");
       if(fs.existsSync(brandIcon)){sendFile(res,brandIcon);return;}
