@@ -185,14 +185,16 @@ function injectGoogleVerification(html){
   if(existing.test(html)) return html.replace(existing,meta);
   return html.replace(/<\/head>/i,`  ${meta}\n</head>`);
 }
-function sendFile(res,f){
+async function sendFile(res,f,pathname="/"){
   res.statusCode=200;
   const type=mime[path.extname(f).toLowerCase()]||"application/octet-stream";
   res.setHeader("Content-Type",type);
   if(f.includes(path.sep+"admin"+path.sep)||f.endsWith(path.sep+"admin.html")) res.setHeader("Cache-Control","no-store, max-age=0");
   if(path.extname(f).toLowerCase()===".html"){
-    const html=fs.readFileSync(f,"utf8");
-    res.end(injectGoogleVerification(html));
+    let html=fs.readFileSync(f,"utf8");
+    html=injectGoogleVerification(html);
+    html=await injectCustomCode(html,pathname);
+    res.end(html);
     return;
   }
   fs.createReadStream(f).pipe(res);
@@ -231,7 +233,17 @@ async function runFunction(req,res){
     appendResponseHeaders(res,out.headers);
     if(req.method==="HEAD"){res.end();return;}
     const ab=await out.arrayBuffer();
-    res.end(Buffer.from(ab));
+    let payload=Buffer.from(ab);
+    const parsedReqUrl=new URL(reqUrl);
+    const ct=String(out.headers.get("content-type")||"");
+    if(ct.includes("text/html")){
+      let html=payload.toString("utf8");
+      html=injectCustomCodeAdminUi(html,parsedReqUrl.pathname,parsedReqUrl.search);
+      html=injectGoogleVerification(html);
+      html=await injectCustomCode(html,parsedReqUrl.pathname);
+      payload=Buffer.from(html);
+    }
+    res.end(payload);
     return;
   }
   res.statusCode=Number(out?.statusCode||200);
