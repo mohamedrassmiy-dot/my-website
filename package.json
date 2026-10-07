@@ -10,6 +10,6 @@
     "sanitize-html": "2.14.0"
   },
   "scripts": {
-    "start": "npx serve release -l $PORT"
+    "start": "node server.mjs"
   }
 }
