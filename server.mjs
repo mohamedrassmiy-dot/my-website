@@ -2,7 +2,17 @@ import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import * as app from "./release/netlify/functions/app.mjs";
+// Railway compatibility: emulate the small Netlify Blobs surface used by the CMS with durable /data storage.
+const blobDir=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
+fs.mkdirSync(blobDir,{recursive:true});
+const blobFile=(key)=>path.join(blobDir,Buffer.from(String(key)).toString("base64url")+".blob");
+globalThis.netlifyBlobsContext={
+  deployID:"railway",
+  siteID:"rassmiy-marketing",
+  token:"railway-local-storage"
+};
+process.env.NETLIFY_BLOBS_CONTEXT=JSON.stringify(globalThis.netlifyBlobsContext);
+const app = await import("./release/netlify/functions/app.mjs");
 
 const root=path.resolve("release");
 const port=Number(process.env.PORT||8080);
