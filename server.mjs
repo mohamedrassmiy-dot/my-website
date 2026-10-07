@@ -131,6 +131,24 @@ async function rassmiySelfTest(){
   const critical=tests.filter(x=>["homepage","content-cards","site-js","install-page"].includes(x.name));
   const ok=volumeWrite && critical.every(x=>x.ok) && admin.ok;
   console.log("[RASSMIY_SELFTEST] "+JSON.stringify({ok,volumeWrite,tests}));
+  try{
+    const legacyBase="https://rassmiy-marketing.netlify.app";
+    const health=await fetch(legacyBase+"/api/health",{redirect:"manual",signal:AbortSignal.timeout(5000)});
+    let healthJson=null;try{healthJson=await health.json();}catch{}
+    const legacyAdmin=await fetch(legacyBase+"/admin",{redirect:"manual",signal:AbortSignal.timeout(5000)});
+    const cardsRes=await fetch(legacyBase+"/api/content-cards",{redirect:"manual",signal:AbortSignal.timeout(5000)});
+    let cardsCount=null;try{const j=await cardsRes.json();cardsCount=Array.isArray(j?.cards)?j.cards.length:null;}catch{}
+    console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({
+      healthStatus:health.status,
+      installed:healthJson?.installed??null,
+      adminStatus:legacyAdmin.status,
+      adminLocation:legacyAdmin.headers.get("location")||null,
+      cardsStatus:cardsRes.status,
+      cardsCount
+    }));
+  }catch(err){
+    console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({error:String(err?.message||err)}));
+  }
 }
 server.listen(port,"0.0.0.0",()=>{
   console.log("Rassmiy CMS listening on",port);
