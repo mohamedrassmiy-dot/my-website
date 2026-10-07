@@ -41,11 +41,23 @@ async function runFunction(req,res){
   };
   const handler=app.handler||app.default;
   if(typeof handler!=="function") throw new Error("CMS handler export not found");
-  const out=await handler(event,{});
+  const reqUrl=proto+"://"+host+req.url;
+  const webReq=new Request(reqUrl,{method:req.method,headers:new Headers(event.headers),body:["GET","HEAD"].includes(req.method)?undefined:(body||undefined)});
+  let out=await handler(webReq,{});
+  if(out instanceof Response){
+    res.statusCode=out.status;
+    out.headers.forEach((v,k)=>res.setHeader(k,v));
+    const ab=await out.arrayBuffer();
+    res.end(Buffer.from(ab));
+    return;
+  }
   res.statusCode=Number(out?.statusCode||200);
   for(const [k,v] of Object.entries(out?.headers||{})) if(v!=null) res.setHeader(k,String(v));
   if(out?.multiValueHeaders) for(const [k,vals] of Object.entries(out.multiValueHeaders)) if(Array.isArray(vals)) res.setHeader(k,vals.map(String));
   const payload=out?.body??"";
+  if(payload && typeof payload.getReader==="function"){
+    const ab=await new Response(payload).arrayBuffer(); res.end(Buffer.from(ab)); return;
+  }
   res.end(out?.isBase64Encoded?Buffer.from(payload,"base64"):payload);
 }
 const server=http.createServer(async(req,res)=>{
