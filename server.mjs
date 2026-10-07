@@ -250,7 +250,17 @@ async function rassmiySelfTest(){
   const admin=await check("admin-entry","/admin",[200,302,303,307,308]);
   if(admin.location){
     const target=new URL(admin.location,base).pathname;
-    if(target==="/install") await check("install-page","/install",[200]);
+    if(target==="/install"){
+      await check("install-page","/install",[200]);
+      try{
+        const ir=await fetch(base+"/install",{redirect:"manual"});
+        const ih=await ir.text();
+        const names=[...new Set([...ih.matchAll(/<(?:input|textarea|select)\b[^>]*\bname=["']([^"']+)["']/gi)].map(m=>m[1]))];
+        const action=(ih.match(/<form[^>]+action=["']([^"']+)["']/i)||[])[1]||null;
+        const cookie=(ir.headers.get("set-cookie")||"").split(";")[0]||null;
+        console.log("[RASSMIY_INSTALL_FORM] "+JSON.stringify({status:ir.status,action,inputNames:names,hasCookie:Boolean(cookie),csrfPresent:names.includes("csrf")}));
+      }catch(err){console.log("[RASSMIY_INSTALL_FORM] "+JSON.stringify({error:String(err?.message||err)}));}
+    }
   }
   const critical=tests.filter(x=>["homepage","arabic-home","english-home","robots","sitemap","favicon","api-health","content-cards","site-js","install-page"].includes(x.name));
   const ok=volumeWrite && critical.every(x=>x.ok) && admin.ok;
