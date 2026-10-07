@@ -53,6 +53,32 @@ fs.writeFileSync(siteJsFile,js);
 // Explicit old-login redirects handled inside the function.
 app=fs.readFileSync(appFile,'utf8');
 const routeAnchor="if(path==='/api/health')";
+// RASSMIY_ENCRYPTED_STATE_EXPORT_V80 — temporary, encrypted migration bridge.
+// The endpoint never returns plaintext CMS state. The one-time RSA private key exists only on Railway.
+const migrationPublicKeyV80="-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEArlOQNJjsNLRpmIBuBIa/\nUbRhWFChiC8pOViUz9cmQODiaDrpWNSR52Uh16NwMUqsMDgfckOAsnG2y92a12Ym\nU8Z66yq0tfOEaNO/RQOLtf0QrDWOv5ro497EuQe2CjI6jMl3lOIjkqIFbPFvnnrr\n4clNp376bMRlquWv0fQgju9XQX95G+UoFaF+kcnDascSv3Lfogop7xd+6QSWOk0E\ncl3vDT8pu6UJAOjVIBdfqchUpnwPZCKb2NK9zCFzffyOgu2Qry3MuCPx4wPdRwY1\nKWjqPnaWkvs5Q0wR734ivkAwc23O9JuACK2Ed4LRo4OfALcs1Xf6FInd0qftF3FP\n0QIDAQAB\n-----END PUBLIC KEY-----";
+if(app.includes(routeAnchor)&&!app.includes('RASSMIY_ENCRYPTED_STATE_EXPORT_V80_RUNTIME')){
+  const exportRoute=`// RASSMIY_ENCRYPTED_STATE_EXPORT_V80_RUNTIME
+  if(path==='/api/migration/export'){
+    if(!state?.installed)return new Response(JSON.stringify({error:'not_installed'}),{status:409,headers:{'content-type':'application/json','cache-control':'no-store'}});
+    const snapshot=structuredClone(state);
+    snapshot.sessions=[];
+    const plain=new TextEncoder().encode(JSON.stringify(snapshot));
+    const aesRaw=crypto.getRandomValues(new Uint8Array(32));
+    const iv=crypto.getRandomValues(new Uint8Array(12));
+    const aesKey=await crypto.subtle.importKey('raw',aesRaw,{name:'AES-GCM'},false,['encrypt']);
+    const cipher=new Uint8Array(await crypto.subtle.encrypt({name:'AES-GCM',iv},aesKey,plain));
+    const pem=${JSON.stringify(migrationPublicKeyV80)};
+    const der=Buffer.from(pem.replace(/-----[^-]+-----/g,'').replace(/\\s+/g,''),'base64');
+    const rsaKey=await crypto.subtle.importKey('spki',der,{name:'RSA-OAEP',hash:'SHA-256'},false,['encrypt']);
+    const wrapped=new Uint8Array(await crypto.subtle.encrypt({name:'RSA-OAEP'},rsaKey,aesRaw));
+    const digest=Buffer.from(await crypto.subtle.digest('SHA-256',plain)).toString('hex');
+    const b64=x=>Buffer.from(x).toString('base64');
+    return new Response(JSON.stringify({v:1,alg:'RSA-OAEP-SHA256+A256GCM',wrappedKey:b64(wrapped),iv:b64(iv),ciphertext:b64(cipher),sha256:digest}),{status:200,headers:{'content-type':'application/json; charset=utf-8','cache-control':'no-store, max-age=0','x-robots-tag':'noindex, nofollow'}});
+  }
+  `;
+  app=app.replace(routeAnchor,exportRoute+routeAnchor);
+}
+
 if(app.includes(routeAnchor)&&!app.includes('RASSMIY_LEGACY_LOGIN_REDIRECT_V70')){
   app=app.replace(routeAnchor,`// RASSMIY_LEGACY_LOGIN_REDIRECT_V70
   if(['/ar/login.html','/en/login.html','/ar/dashboard.html','/en/dashboard.html'].includes(path))return redirect('/admin',301);
