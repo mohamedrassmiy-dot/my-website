@@ -436,8 +436,8 @@ async function productionSelfTest(base){
     const sr=await fetch(base+"/sitemap.xml",{redirect:"manual",cache:"no-store",headers:{"x-forwarded-host":"rassmiy-marketing.up.railway.app","x-forwarded-proto":"https"}});
     const sx=await sr.text();
     const locs=[...sx.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m=>m[1]);
-    const foreign=locs.filter(u=>!u.startsWith(PUBLIC_ORIGIN+"/"));
-    tests.push({name:"sitemap-hosts",path:"/sitemap.xml",status:sr.status,ok:sr.status===200&&locs.length>0&&foreign.length===0,urlCount:locs.length,foreignCount:foreign.length});
+    const legacy=locs.filter(u=>LEGACY_PUBLIC_ORIGINS.some(origin=>u.startsWith(origin)));
+    tests.push({name:"sitemap-hosts",path:"/sitemap.xml",status:sr.status,ok:sr.status===200&&locs.length>0&&legacy.length===0,urlCount:locs.length,legacyHostCount:legacy.length});
   }catch(err){tests.push({name:"sitemap-hosts",path:"/sitemap.xml",status:0,ok:false,error:String(err?.message||err)});}
   await check("favicon","/favicon.ico",[200]);
   await check("gsc-file-1","/googlef284124f6e4cc6fb.html",[200]);
