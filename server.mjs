@@ -255,7 +255,30 @@ async function runFunction(req,res){
 
 const server=http.createServer(async(req,res)=>{
   try{
-    const pathname=new URL(req.url,"http://local").pathname;
+    const reqUrlObj=new URL(req.url,"http://local");
+    const pathname=reqUrlObj.pathname;
+    if(pathname==="/api/custom-code-admin"){
+      if(!customAdminOriginAllowed(req)){res.statusCode=403;res.end("Forbidden");return;}
+      if(!(await cmsAdminAuthenticated(req))){res.statusCode=401;res.end("Unauthorized");return;}
+      if(req.method==="GET"){
+        res.statusCode=200;
+        res.setHeader("Content-Type","application/json; charset=utf-8");
+        res.setHeader("Cache-Control","no-store");
+        res.end(JSON.stringify({snippets:readCustomCode()}));
+        return;
+      }
+      if(req.method==="POST"){
+        if(String(req.headers["x-requested-with"]||"")!=="RassmiyAdmin"){res.statusCode=403;res.end("Forbidden");return;}
+        const raw=await readBody(req,2*1024*1024);
+        let data;try{data=JSON.parse(raw.toString("utf8"));}catch{res.statusCode=400;res.end("Invalid JSON");return;}
+        writeCustomCode(data?.snippets||[]);
+        res.statusCode=200;
+        res.setHeader("Content-Type","application/json; charset=utf-8");
+        res.end(JSON.stringify({ok:true,count:readCustomCode().length}));
+        return;
+      }
+      res.statusCode=405;res.end("Method Not Allowed");return;
+    }
     const googleVerificationFiles={
       "/googlef284124f6e4cc6fb.html":"google-site-verification: googlef284124f6e4cc6fb.html\n",
       "/google5f2aa36fd981433f.html":"google-site-verification: google5f2aa36fd981433f.html\n"
@@ -269,11 +292,11 @@ const server=http.createServer(async(req,res)=>{
     }
     if(["/favicon","/favicon.ico","/apple-touch-icon.png","/apple-touch-icon-precomposed.png"].includes(pathname)){
       const brandIcon=path.join(root,"assets","logo.jpg");
-      if(fs.existsSync(brandIcon)){sendFile(res,brandIcon);return;}
+      if(fs.existsSync(brandIcon)){await sendFile(res,brandIcon,pathname);return;}
     }
     const dynamic=pathname.startsWith("/api/")||pathname.startsWith("/admin")||pathname==="/install";
     if(!dynamic){
-      const f=safeFile(pathname); if(f){sendFile(res,f);return;}
+      const f=safeFile(pathname); if(f){await sendFile(res,f,pathname);return;}
     }
     await runFunction(req,res);
   }catch(err){
@@ -376,6 +399,8 @@ async function productionSelfTest(base){
   await check("favicon","/favicon.ico",[200]);
   await check("gsc-file-1","/googlef284124f6e4cc6fb.html",[200]);
   await check("gsc-file-2","/google5f2aa36fd981433f.html",[200]);
+  let customStorage=false;try{writeCustomCode(readCustomCode());customStorage=fs.existsSync(customCodeFile);}catch{}
+  tests.push({name:"custom-code-storage",path:customCodeFile,status:customStorage?200:500,ok:customStorage});
   await check("api-health","/api/health",[200]);
   await check("content-cards","/api/content-cards",[200]);
   await check("site-js","/assets/site.js",[200]);
