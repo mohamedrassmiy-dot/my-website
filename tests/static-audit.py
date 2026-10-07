@@ -47,4 +47,4 @@ print(json.dumps({'passed':checks,'html_pages':len(list(root.rglob('*.html'))),'
 # RASSMIY_MIGRATION_EXPORT_V81 — patch only after all audits pass.
 import subprocess
 subprocess.run(['node','cms-v45/migration-export-v81.mjs','release'],check=True)
-subprocess.run(['node','--check','release/netlify/functions/app.mjs'],check=True)
+subprocess.run(['node','--check','release/netlify/functions/migration-export.mjs'],check=True)
