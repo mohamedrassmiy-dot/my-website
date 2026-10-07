@@ -60,3 +60,6 @@
 # runtime fix v7.6 — bundle sanitize-html and transitive parser dependencies with esbuild
 
 # seo demand v7.8b preview trigger
+
+[[plugins]]
+  package = "./plugins/netlify-blob-probe"
