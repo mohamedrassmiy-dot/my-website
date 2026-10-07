@@ -29,3 +29,6 @@ jobs:
       - name: Bundle functions like Netlify
         run: |
           npx --yes netlify-cli@latest functions:build --src release/netlify/functions --functions /tmp/netlify-functions-build --debug
+      - name: Inspect existing export routes
+        run: |
+          grep -n -i -E 'backup|export|restore|download|state|admin/export|api/' release/netlify/functions/app.mjs | head -240
