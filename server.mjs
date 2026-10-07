@@ -1,146 +1,102 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
-import { fileURLToPath, pathToFileURL } from "node:url";
-// Railway compatibility: replace Netlify Blobs with durable local storage on the mounted Railway volume.
+
 const blobRoot=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
 fs.mkdirSync(blobRoot,{recursive:true});
 const netlifyBlobsMain=path.resolve("node_modules/@netlify/blobs/dist/main.js");
-// Keep a separate copy of the real Netlify Blobs client for the one-time source migration.
-const realNetlifyBlobs=await import(pathToFileURL(netlifyBlobsMain).href+"?rassmiySource=1");
+
 const shim=String.raw`
-import fs from "node:fs"; import path from "node:path"; import crypto from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
+import crypto from "node:crypto";
+
 const root=process.env.CMS_DATA_DIR||"/data/rassmiy-blobs";
-const enc=s=>Buffer.from(String(s)).toString("base64url"), dec=s=>Buffer.from(s,"base64url").toString();
-const dir=n=>{const d=path.join(root,enc(n||"default"));fs.mkdirSync(d,{recursive:true});return d};
+const enc=s=>Buffer.from(String(s)).toString("base64url");
+const dec=s=>Buffer.from(String(s),"base64url").toString();
+const dir=n=>{const d=path.join(root,enc(n||"default"));fs.mkdirSync(d,{recursive:true});return d;};
 const file=(n,k)=>path.join(dir(n),enc(k)+".blob");
 const meta=(n,k)=>path.join(dir(n),enc(k)+".meta.json");
-export function getStore(input){
- const name=typeof input==="string"?input:(input?.name||"default");
- return {
-  async get(key,opts={}){const f=file(name,key);if(!fs.existsSync(f))return null;const b=fs.readFileSync(f);if(opts?.type==="json")return JSON.parse(b.toString("utf8"));if(opts?.type==="arrayBuffer")return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);if(opts?.type==="blob")return new Blob([b]);if(opts?.type==="stream")return fs.createReadStream(f);return b.toString("utf8")},
-  async set(key,value,opts={}){const b=Buffer.isBuffer(value)?value:value instanceof Uint8Array?Buffer.from(value):Buffer.from(typeof value==="string"?value:JSON.stringify(value));fs.writeFileSync(file(name,key),b);if(opts?.metadata)fs.writeFileSync(meta(name,key),JSON.stringify(opts.metadata));return {etag:crypto.createHash("sha1").update(b).digest("hex"),modified:new Date()}},
-  async setJSON(key,value,opts={}){return this.set(key,JSON.stringify(value),opts)},
-  async delete(key){for(const f of [file(name,key),meta(name,key)])try{fs.unlinkSync(f)}catch{}},
-  async getMetadata(key){const f=meta(name,key);return fs.existsSync(f)?JSON.parse(fs.readFileSync(f,"utf8")):null},
-  async list(){const d=dir(name);const blobs=fs.readdirSync(d).filter(x=>x.endsWith(".blob")).map(x=>({key:dec(x.slice(0,-5))}));return {blobs,directories:[]}}
- };
+const readMeta=(n,k)=>{try{return JSON.parse(fs.readFileSync(meta(n,k),"utf8"));}catch{return null;}};
+
+async function toBuffer(value){
+  if(Buffer.isBuffer(value)) return value;
+  if(value instanceof Uint8Array) return Buffer.from(value);
+  if(value instanceof ArrayBuffer) return Buffer.from(new Uint8Array(value));
+  if(typeof Blob!=="undefined" && value instanceof Blob) return Buffer.from(await value.arrayBuffer());
+  if(value && typeof value.getReader==="function") return Buffer.from(await new Response(value).arrayBuffer());
+  return Buffer.from(typeof value==="string"?value:JSON.stringify(value));
 }
-export function getDeployStore(input){ return getStore(input||"deploy"); }
+function typed(buf,type){
+  if(type==="json") return JSON.parse(buf.toString("utf8"));
+  if(type==="arrayBuffer") return buf.buffer.slice(buf.byteOffset,buf.byteOffset+buf.byteLength);
+  if(type==="blob") return new Blob([buf]);
+  if(type==="stream") return fs.createReadStream("__FILE__");
+  return buf.toString("utf8");
+}
+export function getStore(input){
+  const name=typeof input==="string"?input:(input?.name||"default");
+  return {
+    async get(key,opts={}){
+      const f=file(name,key); if(!fs.existsSync(f)) return null;
+      if(opts?.type==="stream") return fs.createReadStream(f);
+      const b=fs.readFileSync(f);
+      if(opts?.type==="json") return JSON.parse(b.toString("utf8"));
+      if(opts?.type==="arrayBuffer") return b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
+      if(opts?.type==="blob") return new Blob([b]);
+      return b.toString("utf8");
+    },
+    async getWithMetadata(key,opts={}){
+      const f=file(name,key); if(!fs.existsSync(f)) return null;
+      const b=fs.readFileSync(f);
+      let data;
+      if(opts?.type==="json") data=JSON.parse(b.toString("utf8"));
+      else if(opts?.type==="arrayBuffer") data=b.buffer.slice(b.byteOffset,b.byteOffset+b.byteLength);
+      else if(opts?.type==="blob") data=new Blob([b]);
+      else if(opts?.type==="stream") data=fs.createReadStream(f);
+      else data=b.toString("utf8");
+      return {data,metadata:readMeta(name,key),etag:crypto.createHash("sha1").update(b).digest("hex")};
+    },
+    async set(key,value,opts={}){
+      const b=await toBuffer(value);
+      fs.writeFileSync(file(name,key),b);
+      if(opts?.metadata!=null) fs.writeFileSync(meta(name,key),JSON.stringify(opts.metadata));
+      return {etag:crypto.createHash("sha1").update(b).digest("hex"),modified:new Date()};
+    },
+    async setJSON(key,value,opts={}){return this.set(key,JSON.stringify(value),opts);},
+    async delete(key){for(const f of [file(name,key),meta(name,key)])try{fs.unlinkSync(f)}catch{}},
+    async getMetadata(key){return readMeta(name,key);},
+    async list(opts={}){
+      const d=dir(name), prefix=String(opts?.prefix||"");
+      const blobs=fs.readdirSync(d).filter(x=>x.endsWith(".blob")).map(x=>{
+        const key=dec(x.slice(0,-5)); if(prefix&&!key.startsWith(prefix)) return null;
+        const f=path.join(d,x), st=fs.statSync(f), b=fs.readFileSync(f);
+        return {key,size:st.size,etag:crypto.createHash("sha1").update(b).digest("hex"),uploadedAt:st.mtime.toISOString(),metadata:readMeta(name,key)};
+      }).filter(Boolean);
+      return {blobs,directories:[]};
+    }
+  };
+}
+export function getDeployStore(input){return getStore(input||"deploy");}
 export const connectLambda=()=>{};
 export const connectLocal=()=>{};
 `;
 fs.writeFileSync(netlifyBlobsMain,shim);
-const railwayBlobs=await import("@netlify/blobs");
-const app = await import("./release/netlify/functions/app.mjs");
 
-const MIGRATION_SOURCE_SITE_ID="dbf13d3b-88e6-4396-ae96-4adb2ab937a8";
-const MIGRATION_MARKER=path.join(path.dirname(blobRoot),"rassmiy-migration-complete.json");
-const storeEnc=s=>Buffer.from(String(s)).toString("base64url");
-const keyEnc=s=>Buffer.from(String(s)).toString("base64url");
-
-async function verifyMigrationEncryption(state){
-  const encrypted=[];
-  for(const lead of (state?.leads||[])){
-    for(const field of ["name","email","phone","message"]){
-      const value=lead?.[field];
-      if(typeof value==="string"&&value.startsWith("enc:v1:")) encrypted.push(value);
-    }
-  }
-  if(!encrypted.length) return {encrypted:false,verified:true};
-  const raw=process.env.DATA_ENCRYPTION_KEY||"";
-  if(!raw) return {encrypted:true,verified:false,reason:"DATA_ENCRYPTION_KEY_REQUIRED"};
-  try{
-    const digest=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(raw));
-    const key=await crypto.subtle.importKey("raw",digest,{name:"AES-GCM"},false,["decrypt"]);
-    const value=encrypted[0];
-    const [,ver,ivb,ctb]=value.split(":");
-    const iv=new Uint8Array(Buffer.from(ivb,"base64url"));
-    const ct=new Uint8Array(Buffer.from(ctb,"base64url"));
-    await crypto.subtle.decrypt({name:"AES-GCM",iv},key,ct);
-    return {encrypted:true,verified:true};
-  }catch{
-    return {encrypted:true,verified:false,reason:"DATA_ENCRYPTION_KEY_MISMATCH"};
-  }
-}
-
-async function maybeMigrateFromNetlify(){
-  const token=String(process.env.NETLIFY_AUTH_TOKEN||"").trim();
-  if(!token){console.log("[RASSMIY_MIGRATION] waiting_for_NETLIFY_AUTH_TOKEN");return;}
-  if(fs.existsSync(MIGRATION_MARKER)){console.log("[RASSMIY_MIGRATION] already_complete");return;}
-  const source=realNetlifyBlobs.getStore("rassmiy-cms",{siteID:MIGRATION_SOURCE_SITE_ID,token,consistency:"strong"});
-  const state=await source.get("state",{type:"json"});
-  if(!state||!Array.isArray(state.users)||state.users.length<1) throw new Error("MIGRATION_SOURCE_STATE_NOT_INSTALLED");
-  const encryption=await verifyMigrationEncryption(state);
-  if(!encryption.verified){
-    console.error("[RASSMIY_MIGRATION_BLOCKED] "+JSON.stringify(encryption));
-    return;
-  }
-  const listing=await source.list();
-  const keys=(listing?.blobs||[]).map(x=>x.key).filter(Boolean);
-  const counts={};
-  for(const k of ["users","pages","articles","leads","media","redirects","revisions","activity"]) counts[k]=Array.isArray(state[k])?state[k].length:0;
-
-  const stageDir=path.join(blobRoot,".migration-stage-"+Date.now());
-  fs.mkdirSync(stageDir,{recursive:true});
-  let totalBytes=0;
-  try{
-    const migratedState=structuredClone(state);
-    migratedState.sessions={};
-    const stateBytes=Buffer.from(JSON.stringify(migratedState),"utf8");
-    fs.writeFileSync(path.join(stageDir,keyEnc("state")+".blob"),stateBytes);
-    totalBytes+=stateBytes.length;
-    try{
-      const sm=await source.getMetadata("state");
-      if(sm?.metadata&&Object.keys(sm.metadata).length) fs.writeFileSync(path.join(stageDir,keyEnc("state")+".meta.json"),JSON.stringify(sm.metadata));
-    }catch{}
-
-    for(const key of keys){
-      if(key==="state") continue;
-      const entry=await source.getWithMetadata(key,{type:"arrayBuffer"});
-      if(!entry||entry.data==null) throw new Error("MIGRATION_BLOB_MISSING:"+key);
-      const bytes=Buffer.from(entry.data);
-      totalBytes+=bytes.length;
-      if(totalBytes>450*1024*1024) throw new Error("MIGRATION_DATA_EXCEEDS_VOLUME_SAFETY_LIMIT");
-      fs.writeFileSync(path.join(stageDir,keyEnc(key)+".blob"),bytes);
-      if(entry.metadata&&Object.keys(entry.metadata).length) fs.writeFileSync(path.join(stageDir,keyEnc(key)+".meta.json"),JSON.stringify(entry.metadata));
-    }
-
-    const staged=fs.readdirSync(stageDir).filter(x=>x.endsWith(".blob")).length;
-    const expected=new Set(["state",...keys]).size;
-    if(staged!==expected) throw new Error("MIGRATION_STAGED_BLOB_COUNT_MISMATCH");
-
-    const destDir=path.join(blobRoot,storeEnc("rassmiy-cms"));
-    const backupRoot=path.join(path.dirname(blobRoot),"rassmiy-backups");
-    fs.mkdirSync(backupRoot,{recursive:true});
-    const backupDir=path.join(backupRoot,"pre-netlify-"+Date.now());
-    let backedUp=false;
-    try{
-      if(fs.existsSync(destDir)){fs.renameSync(destDir,backupDir);backedUp=true;}
-      fs.renameSync(stageDir,destDir);
-    }catch(err){
-      if(backedUp&&!fs.existsSync(destDir)&&fs.existsSync(backupDir)) fs.renameSync(backupDir,destDir);
-      throw err;
-    }
-    const marker={completedAt:new Date().toISOString(),sourceSiteId:MIGRATION_SOURCE_SITE_ID,counts,blobCount:expected,totalBytes,encryption};
-    fs.writeFileSync(MIGRATION_MARKER,JSON.stringify(marker,null,2));
-    console.log("[RASSMIY_MIGRATION_COMPLETE] "+JSON.stringify(marker));
-  }catch(err){
-    try{fs.rmSync(stageDir,{recursive:true,force:true});}catch{}
-    throw err;
-  }
-}
-
-try{await maybeMigrateFromNetlify();}catch(err){console.error("[RASSMIY_MIGRATION_ERROR]",String(err?.stack||err));}
-
+const app=await import("./release/netlify/functions/app.mjs");
 const root=path.resolve("release");
 const port=Number(process.env.PORT||8080);
-const mime={".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",".mjs":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".ico":"image/x-icon",".xml":"application/xml; charset=utf-8",".txt":"text/plain; charset=utf-8",".webp":"image/webp"};
+const mime={
+  ".html":"text/html; charset=utf-8",".css":"text/css; charset=utf-8",".js":"text/javascript; charset=utf-8",
+  ".mjs":"text/javascript; charset=utf-8",".json":"application/json; charset=utf-8",".svg":"image/svg+xml",
+  ".png":"image/png",".jpg":"image/jpeg",".jpeg":"image/jpeg",".ico":"image/x-icon",".xml":"application/xml; charset=utf-8",
+  ".txt":"text/plain; charset=utf-8",".webp":"image/webp",".woff2":"font/woff2"
+};
 
 function safeFile(urlPath){
   let p=decodeURIComponent(urlPath.split("?")[0]);
   if(p==="/") p="/index.html";
-  const tries=[p, p.endsWith("/")?p+"index.html":p+".html", p+"/index.html"];
+  const tries=[p,p.endsWith("/")?p+"index.html":p+".html",p+"/index.html"];
   for(const t of tries){
     const f=path.resolve(root,"."+t);
     if(f.startsWith(root+path.sep)&&fs.existsSync(f)&&fs.statSync(f).isFile()) return f;
@@ -153,29 +109,39 @@ function sendFile(res,f){
   if(f.includes(path.sep+"admin"+path.sep)||f.endsWith(path.sep+"admin.html")) res.setHeader("Cache-Control","no-store, max-age=0");
   fs.createReadStream(f).pipe(res);
 }
-function bodyOf(req){return new Promise((resolve,reject)=>{const chunks=[];let n=0;req.on("data",c=>{n+=c.length;if(n>2_000_000){reject(new Error("body too large"));req.destroy();return;}chunks.push(c)});req.on("end",()=>resolve(Buffer.concat(chunks).toString("utf8")));req.on("error",reject);});}
+function readBody(req,max=25*1024*1024){
+  return new Promise((resolve,reject)=>{
+    const chunks=[];let n=0;
+    req.on("data",c=>{n+=c.length;if(n>max){reject(Object.assign(new Error("body too large"),{statusCode:413}));req.destroy();return;}chunks.push(c);});
+    req.on("end",()=>resolve(Buffer.concat(chunks)));
+    req.on("error",reject);
+  });
+}
+function appendResponseHeaders(res,headers){
+  const setCookies=typeof headers.getSetCookie==="function"?headers.getSetCookie():[];
+  headers.forEach((v,k)=>{if(k.toLowerCase()!=="set-cookie")res.setHeader(k,v);});
+  if(setCookies.length) res.setHeader("Set-Cookie",setCookies);
+  else{
+    const sc=headers.get("set-cookie"); if(sc) res.setHeader("Set-Cookie",sc);
+  }
+}
 async function runFunction(req,res){
-  const body=await bodyOf(req);
-  const proto=req.headers["x-forwarded-proto"]||"https";
+  const body=await readBody(req);
+  const proto=String(req.headers["x-forwarded-proto"]||"https").split(",")[0].trim();
   const host=req.headers.host||"rassmiy-marketing.up.railway.app";
-  const event={
-    httpMethod:req.method,
-    path:new URL(req.url,proto+"://"+host).pathname,
-    rawUrl:proto+"://"+host+req.url,
-    rawQuery:new URL(req.url,proto+"://"+host).searchParams.toString(),
-    headers:Object.fromEntries(Object.entries(req.headers).map(([k,v])=>[k,Array.isArray(v)?v.join(","):String(v??"")])),
-    queryStringParameters:Object.fromEntries(new URL(req.url,proto+"://"+host).searchParams.entries()),
-    body:body||null,
-    isBase64Encoded:false
-  };
+  const reqUrl=proto+"://"+host+req.url;
+  const webReq=new Request(reqUrl,{
+    method:req.method,
+    headers:new Headers(Object.fromEntries(Object.entries(req.headers).map(([k,v])=>[k,Array.isArray(v)?v.join(","):String(v??"")]))),
+    body:["GET","HEAD"].includes(req.method)?undefined:body
+  });
   const handler=app.handler||app.default;
   if(typeof handler!=="function") throw new Error("CMS handler export not found");
-  const reqUrl=proto+"://"+host+req.url;
-  const webReq=new Request(reqUrl,{method:req.method,headers:new Headers(event.headers),body:["GET","HEAD"].includes(req.method)?undefined:(body||undefined)});
-  let out=await handler(webReq,{});
+  const out=await handler(webReq,{});
   if(out instanceof Response){
     res.statusCode=out.status;
-    out.headers.forEach((v,k)=>res.setHeader(k,v));
+    appendResponseHeaders(res,out.headers);
+    if(req.method==="HEAD"){res.end();return;}
     const ab=await out.arrayBuffer();
     res.end(Buffer.from(ab));
     return;
@@ -184,56 +150,103 @@ async function runFunction(req,res){
   for(const [k,v] of Object.entries(out?.headers||{})) if(v!=null) res.setHeader(k,String(v));
   if(out?.multiValueHeaders) for(const [k,vals] of Object.entries(out.multiValueHeaders)) if(Array.isArray(vals)) res.setHeader(k,vals.map(String));
   const payload=out?.body??"";
-  if(payload && typeof payload.getReader==="function"){
-    const ab=await new Response(payload).arrayBuffer(); res.end(Buffer.from(ab)); return;
-  }
   res.end(out?.isBase64Encoded?Buffer.from(payload,"base64"):payload);
 }
+
 const server=http.createServer(async(req,res)=>{
   try{
     const pathname=new URL(req.url,"http://local").pathname;
-    if(pathname==="/api/migration/probe-7f3a9d2c81e64b27"){
-      if(req.method!=="POST"){res.statusCode=405;res.end("Method Not Allowed");return;}
-      let size=0;const parts=[];
-      for await (const chunk of req){size+=chunk.length;if(size>4096){res.statusCode=413;res.end("Too Large");return;}parts.push(chunk);}
-      let raw={};try{raw=JSON.parse(Buffer.concat(parts).toString("utf8")||"{}");}catch{res.statusCode=400;res.end("Bad JSON");return;}
-      const counts={};for(const [k,v] of Object.entries(raw.counts||{})){if(typeof v==="number"&&Number.isFinite(v))counts[String(k).slice(0,40)]=v;}
-      const payload={stateFound:Boolean(raw.stateFound),installed:raw.installed===true,blobCount:Number.isFinite(raw.blobCount)?raw.blobCount:null,counts,error:raw.error?String(raw.error).slice(0,500):null,at:new Date().toISOString()};
-      console.log("[NETLIFY_BLOB_PROBE] "+JSON.stringify(payload));
-      res.statusCode=204;res.setHeader("Cache-Control","no-store");res.end();return;
-    }
     if(["/favicon","/favicon.ico","/apple-touch-icon.png","/apple-touch-icon-precomposed.png"].includes(pathname)){
       const brandIcon=path.join(root,"assets","logo.jpg");
       if(fs.existsSync(brandIcon)){sendFile(res,brandIcon);return;}
     }
-    if(!pathname.startsWith("/api/")&&!pathname.startsWith("/admin")){
+    const dynamic=pathname.startsWith("/api/")||pathname.startsWith("/admin")||pathname==="/install";
+    if(!dynamic){
       const f=safeFile(pathname); if(f){sendFile(res,f);return;}
     }
-    if(pathname.startsWith("/api/")||pathname.startsWith("/admin")){
-      await runFunction(req,res); return;
-    }
-    const f=safeFile(pathname); if(f){sendFile(res,f);return;}
-    await runFunction(req,res); return;
-  }catch(err){console.error(err);res.statusCode=500;res.setHeader("Content-Type","application/json; charset=utf-8");res.end(JSON.stringify({error:"server_error"}));}
+    await runFunction(req,res);
+  }catch(err){
+    console.error("[RASSMIY_SERVER_ERROR]",err?.stack||err);
+    res.statusCode=Number(err?.statusCode||500);
+    res.setHeader("Content-Type","application/json; charset=utf-8");
+    res.end(JSON.stringify({error:res.statusCode===413?"payload_too_large":"server_error"}));
+  }
 });
-async function rassmiySelfTest(){
-  const base="http://127.0.0.1:"+port;
+
+function cookieJarFrom(res,jar={}){
+  const values=typeof res.headers.getSetCookie==="function"?res.headers.getSetCookie():[res.headers.get("set-cookie")].filter(Boolean);
+  for(const raw of values){
+    const first=String(raw).split(";")[0], i=first.indexOf("=");
+    if(i>0) jar[first.slice(0,i).trim()]=first.slice(i+1).trim();
+  }
+  return jar;
+}
+const cookieHeader=jar=>Object.entries(jar).map(([k,v])=>k+"="+v).join("; ");
+const csrfFrom=html=>(html.match(/name=["']csrf["'][^>]*value=["']([^"']+)["']/i)||html.match(/value=["']([^"']+)["'][^>]*name=["']csrf["']/i)||[])[1]||"";
+
+async function bootstrapAdmin(base){
+  const email=String(process.env.BOOTSTRAP_ADMIN_EMAIL||"").trim();
+  const password=String(process.env.BOOTSTRAP_ADMIN_PASSWORD||"");
+  const name=String(process.env.BOOTSTRAP_ADMIN_NAME||"Mohamed Ali Rassmiy").trim();
+  const health=await fetch(base+"/api/health",{redirect:"manual"});
+  const before=await health.json().catch(()=>({}));
+  if(before?.installed) return {installed:true,created:false,loginTest:null};
+  if(!email||!password) return {installed:false,created:false,reason:"bootstrap_credentials_not_set"};
+
+  const jar={};
+  const ig=await fetch(base+"/install",{redirect:"manual"});
+  cookieJarFrom(ig,jar);
+  const ih=await ig.text();
+  const csrf=csrfFrom(ih);
+  if(!csrf) throw new Error("INSTALL_CSRF_NOT_FOUND");
+  const body=new URLSearchParams({csrf,name,email,password,confirm_password:password});
+  const ip=await fetch(base+"/install",{
+    method:"POST",redirect:"manual",
+    headers:{"content-type":"application/x-www-form-urlencoded","cookie":cookieHeader(jar)},
+    body
+  });
+  cookieJarFrom(ip,jar);
+  if(![200,302,303].includes(ip.status)) throw new Error("INSTALL_POST_FAILED_"+ip.status);
+
+  const h2=await fetch(base+"/api/health",{redirect:"manual"});
+  const after=await h2.json().catch(()=>({}));
+  if(!after?.installed) throw new Error("INSTALL_DID_NOT_PERSIST");
+
+  const loginJar={};
+  const lg=await fetch(base+"/admin",{redirect:"manual"});
+  cookieJarFrom(lg,loginJar);
+  const lh=await lg.text();
+  const lcsrf=csrfFrom(lh);
+  if(!lcsrf) throw new Error("LOGIN_CSRF_NOT_FOUND");
+  const lp=await fetch(base+"/admin",{
+    method:"POST",redirect:"manual",
+    headers:{"content-type":"application/x-www-form-urlencoded","cookie":cookieHeader(loginJar)},
+    body:new URLSearchParams({csrf:lcsrf,email,password})
+  });
+  cookieJarFrom(lp,loginJar);
+  const dash=await fetch(base+"/admin?section=dashboard",{redirect:"manual",headers:{"cookie":cookieHeader(loginJar)}});
+  const pages=await fetch(base+"/admin?section=pages",{redirect:"manual",headers:{"cookie":cookieHeader(loginJar)}});
+  const articles=await fetch(base+"/admin?section=articles",{redirect:"manual",headers:{"cookie":cookieHeader(loginJar)}});
+  const loginOk=[200].includes(dash.status)&&[200].includes(pages.status)&&[200].includes(articles.status);
+  if(!loginOk) throw new Error("ADMIN_LOGIN_TEST_FAILED");
+  return {installed:true,created:true,loginTest:{dashboard:dash.status,pages:pages.status,articles:articles.status}};
+}
+
+async function productionSelfTest(base){
   const tests=[];
   async function check(name,p,allowed){
     try{
       const r=await fetch(base+p,{redirect:"manual"});
       const item={name,path:p,status:r.status,location:r.headers.get("location")||null,ok:allowed.includes(r.status)};
-      if(p==="/api/content-cards" && r.status===200){
-        try{const j=await r.json();item.cards=Array.isArray(j?.cards)?j.cards.length:-1;item.ok=item.ok&&item.cards>0;}catch{item.cards=-1;item.ok=false;}
-      }else if(p==="/api/health" && r.status===200){
-        try{const j=await r.json();item.installed=Boolean(j?.installed);}catch{item.ok=false;}
-      }else{await r.arrayBuffer();}
-      tests.push(item);return item;
-    }catch(err){const item={name,path:p,status:0,ok:false,error:String(err?.message||err)};tests.push(item);return item;}
+      if(p==="/api/health"&&r.status===200){const j=await r.json().catch(()=>({}));item.installed=Boolean(j?.installed);item.ok=item.ok&&item.installed;}
+      else if(p==="/api/content-cards"&&r.status===200){const j=await r.json().catch(()=>({}));item.cards=Array.isArray(j?.cards)?j.cards.length:-1;item.ok=item.ok&&item.cards>0;}
+      else await r.arrayBuffer();
+      tests.push(item);
+    }catch(err){tests.push({name,path:p,status:0,ok:false,error:String(err?.message||err)});}
   }
   let volumeWrite=false;
   try{
-    const probe=path.join(blobRoot,".railway-selftest");
+    const probe=path.join(blobRoot,".railway-write-test");
     fs.writeFileSync(probe,"ok-"+Date.now());
     volumeWrite=fs.readFileSync(probe,"utf8").startsWith("ok-");
     fs.unlinkSync(probe);
@@ -247,101 +260,24 @@ async function rassmiySelfTest(){
   await check("api-health","/api/health",[200]);
   await check("content-cards","/api/content-cards",[200]);
   await check("site-js","/assets/site.js",[200]);
-  const admin=await check("admin-entry","/admin",[200,302,303,307,308]);
-  if(admin.location){
-    const target=new URL(admin.location,base).pathname;
-    if(target==="/install"){
-      await check("install-page","/install",[200]);
-      try{
-        const ir=await fetch(base+"/install",{redirect:"manual"});
-        const ih=await ir.text();
-        const names=[...new Set([...ih.matchAll(/<(?:input|textarea|select)\b[^>]*\bname=["']([^"']+)["']/gi)].map(m=>m[1]))];
-        const action=(ih.match(/<form[^>]+action=["']([^"']+)["']/i)||[])[1]||null;
-        const cookie=(ir.headers.get("set-cookie")||"").split(";")[0]||null;
-        console.log("[RASSMIY_INSTALL_FORM] "+JSON.stringify({status:ir.status,action,inputNames:names,hasCookie:Boolean(cookie),csrfPresent:names.includes("csrf")}));
-      }catch(err){console.log("[RASSMIY_INSTALL_FORM] "+JSON.stringify({error:String(err?.message||err)}));}
-    }
-  }
-  const critical=tests.filter(x=>["homepage","arabic-home","english-home","robots","sitemap","favicon","api-health","content-cards","site-js","install-page"].includes(x.name));
-  const ok=volumeWrite && critical.every(x=>x.ok) && admin.ok;
-  console.log("[RASSMIY_SELFTEST] "+JSON.stringify({ok,volumeWrite,tests}));
-  try{
-    const legacyBase="https://rassmiy-marketing.netlify.app";
-    const health=await fetch(legacyBase+"/api/health",{redirect:"manual",signal:AbortSignal.timeout(5000)});
-    let healthJson=null;try{healthJson=await health.json();}catch{}
-    const legacyAdmin=await fetch(legacyBase+"/admin",{redirect:"manual",signal:AbortSignal.timeout(5000)});
-    const cardsRes=await fetch(legacyBase+"/api/content-cards",{redirect:"manual",signal:AbortSignal.timeout(5000)});
-    let cardsCount=null;try{const j=await cardsRes.json();cardsCount=Array.isArray(j?.cards)?j.cards.length:null;}catch{}
-    const adminHtml=await legacyAdmin.text();
-    const csrfName=(adminHtml.match(/name=["']([^"']*csrf[^"']*)["']/i)||[])[1]||null;
-    const formAction=(adminHtml.match(/<form[^>]+action=["']([^"']+)["']/i)||[])[1]||null;
-    const loginInputs=[...adminHtml.matchAll(/<input[^>]+name=["']([^"']+)["']/gi)].map(m=>m[1]).filter(Boolean);
-    let endpointHints=[];
-    try{
-      const aj=await fetch(legacyBase+"/assets/admin.js",{signal:AbortSignal.timeout(5000)});
-      const js=await aj.text();
-      endpointHints=[...new Set([...js.matchAll(/\/(?:api|admin)\/[A-Za-z0-9_?=&.%/-]+/g)].map(m=>m[0]))].slice(0,80);
-    }catch{}
-    console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({
-      healthStatus:health.status,
-      installed:healthJson?.installed??null,
-      adminStatus:legacyAdmin.status,
-      adminLocation:legacyAdmin.headers.get("location")||null,
-      cardsStatus:cardsRes.status,
-      cardsCount,
-      loginForm:{action:formAction,csrfName,inputNames:[...new Set(loginInputs)]},
-      endpointHints
-    }));
-  }catch(err){
-    console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({error:String(err?.message||err)}));
-  }
-
-  // Temporary migration inspector. Credentials are injected only as Railway environment variables.
-  try{
-    const src=fs.readFileSync(path.resolve("release/netlify/functions/app.mjs"),"utf8");
-    const pats=["getStore(","getDeployStore(","async function loadState","async function saveState","setJSON(","store.get("];
-    const excerpts={};
-    for(const p of pats){
-      const i=src.indexOf(p);
-      if(i>=0) excerpts[p]=src.slice(Math.max(0,i-450),Math.min(src.length,i+1400)).replace(/\s+/g," ");
-    }
-    console.log("[RASSMIY_APP_STORAGE_DIAG] "+JSON.stringify(excerpts));
-  }catch(err){
-    console.log("[RASSMIY_APP_STORAGE_DIAG] "+JSON.stringify({error:String(err?.message||err)}));
-  }
-
-  if(process.env.MIGRATION_SOURCE_EMAIL && process.env.MIGRATION_SOURCE_PASSWORD){
-    try{
-      const legacyBase="https://rassmiy-marketing.netlify.app";
-      const loginGet=await fetch(legacyBase+"/admin",{redirect:"manual",signal:AbortSignal.timeout(7000)});
-      const loginHtml=await loginGet.text();
-      const csrf=(loginHtml.match(/name=["']csrf["'][^>]*value=["']([^"']+)["']/i)||loginHtml.match(/value=["']([^"']+)["'][^>]*name=["']csrf["']/i)||[])[1]||"";
-      const preCookie=(loginGet.headers.get("set-cookie")||"").split(";")[0];
-      const body=new URLSearchParams({csrf,email:process.env.MIGRATION_SOURCE_EMAIL,password:process.env.MIGRATION_SOURCE_PASSWORD});
-      const loginPost=await fetch(legacyBase+"/admin",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded",...(preCookie?{cookie:preCookie}:{})},body,redirect:"manual",signal:AbortSignal.timeout(7000)});
-      const setCookie=loginPost.headers.get("set-cookie")||"";
-      const sessionCookie=(setCookie.split(";")[0]||preCookie);
-      const loginOk=[302,303].includes(loginPost.status)&&Boolean(sessionCookie);
-      const sections=["dashboard","pages","articles","media","leads","seo","redirects","robots","users","activity","settings","security"];
-      const summary={loginOk,loginStatus:loginPost.status,location:loginPost.headers.get("location")||null,sections:{}};
-      if(loginOk){
-        for(const section of sections){
-          const u=legacyBase+"/admin?section="+encodeURIComponent(section);
-          const rr=await fetch(u,{headers:{cookie:sessionCookie},redirect:"manual",signal:AbortSignal.timeout(7000)});
-          const html=await rr.text();
-          const names=[...new Set([...html.matchAll(/<(?:input|textarea|select)\b[^>]*\bname=["']([^"']+)["']/gi)].map(m=>m[1]))];
-          const hrefs=[...new Set([...html.matchAll(/href=["']([^"']+)["']/gi)].map(m=>m[1]).filter(x=>x.startsWith("/admin")||x.startsWith("/media/")).slice(0,120))];
-          const formActions=[...new Set([...html.matchAll(/<form\b[^>]*\baction=["']([^"']+)["']/gi)].map(m=>m[1]))];
-          summary.sections[section]={status:rr.status,bytes:html.length,fieldNames:names.slice(0,120),formActions,hrefs};
-        }
-      }
-      console.log("[RASSMIY_LEGACY_ADMIN_INSPECT] "+JSON.stringify(summary));
-    }catch(err){
-      console.log("[RASSMIY_LEGACY_ADMIN_INSPECT] "+JSON.stringify({error:String(err?.message||err)}));
-    }
-  }
+  await check("admin","/admin",[200]);
+  const ok=volumeWrite&&tests.every(x=>x.ok);
+  return {ok,volumeWrite,tests};
 }
-server.listen(port,"0.0.0.0",()=>{
+
+server.listen(port,"0.0.0.0",async()=>{
   console.log("Rassmiy CMS listening on",port);
-  setTimeout(()=>rassmiySelfTest().catch(err=>console.error("[RASSMIY_SELFTEST_ERROR]",err)),600);
+  const base="http://127.0.0.1:"+port;
+  try{
+    const bootstrap=await bootstrapAdmin(base);
+    console.log("[RASSMIY_BOOTSTRAP] "+JSON.stringify(bootstrap));
+  }catch(err){
+    console.error("[RASSMIY_BOOTSTRAP_ERROR]",String(err?.stack||err));
+  }
+  try{
+    const qa=await productionSelfTest(base);
+    console.log("[RASSMIY_PRODUCTION_QA] "+JSON.stringify(qa));
+  }catch(err){
+    console.error("[RASSMIY_PRODUCTION_QA_ERROR]",String(err?.stack||err));
+  }
 });
