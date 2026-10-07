@@ -173,6 +173,37 @@ async function rassmiySelfTest(){
   }catch(err){
     console.log("[RASSMIY_NETLIFY_SOURCE_CHECK] "+JSON.stringify({error:String(err?.message||err)}));
   }
+
+  // Temporary migration inspector. Credentials are injected only as Railway environment variables.
+  if(process.env.MIGRATION_SOURCE_EMAIL && process.env.MIGRATION_SOURCE_PASSWORD){
+    try{
+      const legacyBase="https://rassmiy-marketing.netlify.app";
+      const loginGet=await fetch(legacyBase+"/admin",{redirect:"manual",signal:AbortSignal.timeout(7000)});
+      const loginHtml=await loginGet.text();
+      const csrf=(loginHtml.match(/name=["']csrf["'][^>]*value=["']([^"']+)["']/i)||loginHtml.match(/value=["']([^"']+)["'][^>]*name=["']csrf["']/i)||[])[1]||"";
+      const body=new URLSearchParams({csrf,email:process.env.MIGRATION_SOURCE_EMAIL,password:process.env.MIGRATION_SOURCE_PASSWORD});
+      const loginPost=await fetch(legacyBase+"/admin",{method:"POST",headers:{"content-type":"application/x-www-form-urlencoded"},body,redirect:"manual",signal:AbortSignal.timeout(7000)});
+      const setCookie=loginPost.headers.get("set-cookie")||"";
+      const sessionCookie=setCookie.split(";")[0];
+      const loginOk=[302,303].includes(loginPost.status)&&Boolean(sessionCookie);
+      const sections=["dashboard","pages","articles","media","leads","seo","redirects","robots","users","activity","settings","security"];
+      const summary={loginOk,loginStatus:loginPost.status,location:loginPost.headers.get("location")||null,sections:{}};
+      if(loginOk){
+        for(const section of sections){
+          const u=legacyBase+"/admin?section="+encodeURIComponent(section);
+          const rr=await fetch(u,{headers:{cookie:sessionCookie},redirect:"manual",signal:AbortSignal.timeout(7000)});
+          const html=await rr.text();
+          const names=[...new Set([...html.matchAll(/<(?:input|textarea|select)\b[^>]*\bname=["']([^"']+)["']/gi)].map(m=>m[1]))];
+          const hrefs=[...new Set([...html.matchAll(/href=["']([^"']+)["']/gi)].map(m=>m[1]).filter(x=>x.startsWith("/admin")||x.startsWith("/media/")).slice(0,120))];
+          const formActions=[...new Set([...html.matchAll(/<form\b[^>]*\baction=["']([^"']+)["']/gi)].map(m=>m[1]))];
+          summary.sections[section]={status:rr.status,bytes:html.length,fieldNames:names.slice(0,120),formActions,hrefs};
+        }
+      }
+      console.log("[RASSMIY_LEGACY_ADMIN_INSPECT] "+JSON.stringify(summary));
+    }catch(err){
+      console.log("[RASSMIY_LEGACY_ADMIN_INSPECT] "+JSON.stringify({error:String(err?.message||err)}));
+    }
+  }
 }
 server.listen(port,"0.0.0.0",()=>{
   console.log("Rassmiy CMS listening on",port);
