@@ -7,19 +7,38 @@ const leadsFile="/data/leads.json"; let leads:any[]=[]; try{const f=Bun.file(lea
 const cats={tile:"أدوات البلاط",paint:"أدوات الدهان",gypsum:"أدوات الجبس بورد",hand:"عدد يدوية",protect:"مستلزمات حماية وتنظيف"};
 const products=[
  {slug:"tile-spacers-1mm",name:"فواصل بلاط 1 مم",cat:"tile",price:8,desc:"فواصل بلاط بلاستيكية لضبط المسافات بين البلاط أثناء التركيب."},
- {slug:"tile-leveling-wedge",name:"إسفين تسوية بلاط",cat:"tile",price:18,desc:"يساعد على تسوية البلاط وتقليل الفروقات أثناء التركيب."},
- {slug:"manual-tile-cutter",name:"قاطع بلاط يدوي",cat:"tile",price:249,desc:"قاطع يدوي للسيراميك والبورسلان."},
- {slug:"paint-roller-9",name:"رول دهان 9 بوصة",cat:"paint",price:19,desc:"رول مناسب لدهان الجدران والأسطح الداخلية."},
- {slug:"paint-brush-3",name:"فرشاة دهان 3 بوصة",cat:"paint",price:14,desc:"فرشاة للزوايا والحواف والتفاصيل."},
- {slug:"silicone-gun",name:"مسدس سيليكون",cat:"hand",price:28,desc:"أداة لتطبيق السيليكون والمواد اللاصقة."},
- {slug:"drywall-screws",name:"براغي جبس بورد",cat:"gypsum",price:32,desc:"براغي لتثبيت ألواح الجبس بورد."},
- {slug:"masking-tape",name:"شطرطون حماية",cat:"protect",price:9,desc:"شريط حماية للأسطح والحواف أثناء التشطيب."}
+ {slug:"tile-spacers-2mm",name:"فواصل بلاط 2 مم",cat:"tile",price:8,desc:"فواصل بلاط مناسبة لتركيب السيراميك والبورسلان بتباعد منتظم."},
+ {slug:"tile-leveling-wedge",name:"إسفين تسوية بلاط",cat:"tile",price:18,desc:"إسفين يساعد على تسوية البلاط وتقليل الفروقات أثناء التركيب."},
+ {slug:"manual-tile-cutter",name:"قاطع بلاط يدوي",cat:"tile",price:249,desc:"أداة لقطع البلاط والسيراميك بدقة أثناء أعمال التركيب."},
+ {slug:"rubber-mallet",name:"مطرقة مطاط",cat:"tile",price:29,desc:"مطرقة مطاطية تستخدم في ضبط البلاط بدون كسر أو خدش."},
+ {slug:"notched-trowel",name:"مشط لاصق",cat:"tile",price:22,desc:"مشط يستخدم لتوزيع لاصق البلاط بشكل متساوٍ."},
+ {slug:"spirit-level",name:"ميزان ماء",cat:"hand",price:35,desc:"أداة لضبط الاستقامة والتوازن في أعمال التركيب."},
+ {slug:"tile-cleaning-sponge",name:"إسفنجة تنظيف بلاط",cat:"protect",price:12,desc:"إسفنجة لتنظيف البلاط وإزالة بقايا اللاصق."},
+ {slug:"paint-roller-9",name:"رول دهان 9 بوصة",cat:"paint",price:19,desc:"رول دهان مناسب لتغطية الجدران والأسطح الداخلية."},
+ {slug:"paint-brush-3",name:"فرشاة دهان 3 بوصة",cat:"paint",price:14,desc:"فرشاة دهان للاستخدام في الزوايا والحواف والتفاصيل."},
+ {slug:"paint-tray",name:"صينية دهان",cat:"paint",price:15,desc:"صينية تستخدم مع الرول لتوزيع الدهان بسهولة."},
+ {slug:"masking-tape",name:"شطرطون حماية",cat:"protect",price:9,desc:"شريط حماية يستخدم أثناء الدهان والتشطيب."},
+ {slug:"protective-sheet",name:"مشمع حماية",cat:"protect",price:25,desc:"مشمع لحماية الأرضيات والأثاث أثناء التشطيب."},
+ {slug:"putty-knife",name:"سكينة معجون",cat:"paint",price:17,desc:"أداة لفرد المعجون ومعالجة عيوب الجدران."},
+ {slug:"sandpaper",name:"ورق صنفرة",cat:"paint",price:6,desc:"ورق صنفرة لتنعيم الأسطح قبل الدهان."},
+ {slug:"roller-extension-pole",name:"عمود تمديد رول",cat:"paint",price:42,desc:"عمود يستخدم مع رول الدهان للوصول إلى الأماكن العالية."},
+ {slug:"silicone-gun",name:"مسدس سيليكون",cat:"hand",price:28,desc:"أداة تستخدم لتطبيق السيليكون والمواد اللاصقة."},
+ {slug:"measuring-tape",name:"متر قياس",cat:"hand",price:18,desc:"أداة قياس أساسية لأعمال البناء والتشطيب."},
+ {slug:"screwdriver",name:"مفك",cat:"hand",price:16,desc:"مفك للاستخدام في أعمال التركيب والصيانة."},
+ {slug:"pliers",name:"زرادية",cat:"hand",price:24,desc:"أداة يدوية للشد والقص والمساعدة في أعمال الصيانة."},
+ {slug:"drywall-screws",name:"براغي جبس بورد",cat:"gypsum",price:32,desc:"براغي مخصصة لأعمال تثبيت ألواح الجبس بورد."},
+ {slug:"gypsum-joint-tape",name:"شريط فواصل جبس",cat:"gypsum",price:21,desc:"شريط يستخدم لمعالجة فواصل ألواح الجبس بورد."},
+ {slug:"gypsum-corner-bead",name:"زاوية حماية جبس",cat:"gypsum",price:14,desc:"زاوية حماية تستخدم لحماية حواف الجبس بورد."},
+ {slug:"tin-snips",name:"مقص صاج",cat:"hand",price:39,desc:"أداة لقص الصاج والمعادن الخفيفة."},
+ {slug:"mixing-bucket",name:"دلو خلط",cat:"protect",price:18,desc:"دلو يستخدم لخلط المواد اللاصقة والمعجون."}
 ];
 const projects=[
- {slug:"tile-installation",name:"تركيب بلاط",desc:"سلة مقترحة لأعمال تركيب البلاط والسيراميك.",items:["tile-spacers-1mm","tile-leveling-wedge","manual-tile-cutter","masking-tape"]},
- {slug:"room-painting",name:"دهان غرفة",desc:"كل ما يحتاجه فني الدهان من أدوات وتجهيز وحماية.",items:["paint-roller-9","paint-brush-3","masking-tape"]},
- {slug:"gypsum-board",name:"جبس بورد",desc:"أدوات أساسية لأعمال الجبس بورد والتثبيت.",items:["drywall-screws","masking-tape"]},
- {slug:"bathroom-maintenance",name:"صيانة حمام",desc:"مستلزمات أولية لأعمال الصيانة الخفيفة.",items:["silicone-gun","masking-tape"]}
+ {slug:"tile-installation",name:"تركيب بلاط",desc:"سلة مقترحة لأعمال تركيب البلاط والسيراميك.",items:["tile-spacers-1mm","tile-spacers-2mm","tile-leveling-wedge","manual-tile-cutter","rubber-mallet","notched-trowel","spirit-level","tile-cleaning-sponge","mixing-bucket","masking-tape"]},
+ {slug:"room-painting",name:"دهان غرفة",desc:"كل ما يحتاجه فني الدهان من أدوات وتجهيز وحماية.",items:["paint-roller-9","paint-brush-3","paint-tray","masking-tape","protective-sheet","putty-knife","sandpaper","roller-extension-pole"]},
+ {slug:"gypsum-board",name:"جبس بورد",desc:"أدوات التثبيت والتشطيب والقياس لأعمال الجبس بورد.",items:["drywall-screws","gypsum-joint-tape","gypsum-corner-bead","putty-knife","measuring-tape","spirit-level","screwdriver","tin-snips"]},
+ {slug:"roof-waterproofing",name:"عزل سطح",desc:"سلة أولية لأعمال العزل والصيانة وتجهيز الموقع.",items:["protective-sheet","masking-tape","mixing-bucket","putty-knife","measuring-tape","spirit-level"]},
+ {slug:"bathroom-maintenance",name:"صيانة حمام",desc:"مستلزمات أساسية لأعمال الصيانة والترميم الخفيف داخل الحمامات.",items:["silicone-gun","masking-tape","putty-knife","measuring-tape","screwdriver","pliers","protective-sheet"]},
+ {slug:"apartment-finishing",name:"تشطيب شقة",desc:"مجموعة بداية لمراحل التشطيب والقياس والحماية وأعمال البلاط والدهان.",items:["measuring-tape","spirit-level","paint-roller-9","paint-brush-3","paint-tray","masking-tape","protective-sheet","putty-knife","sandpaper","silicone-gun","tile-spacers-1mm","tile-leveling-wedge","rubber-mallet","notched-trowel","mixing-bucket"]}
 ];
 const esc=(s:any)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
 const css=`
@@ -64,7 +83,7 @@ async function form(req:Request){return Object.fromEntries(new URLSearchParams(a
 const html=(s:string,status=200,headers:any={})=>new Response(s,{status,headers:{"content-type":"text/html; charset=utf-8",...headers}});
 const server=Bun.serve({port,hostname:"0.0.0.0",async fetch(req){
  const url=new URL(req.url),p=url.pathname;
- if(p==="/api/health")return Response.json({ok:true,service:"buildflow",version:"0.2.1"});
+ if(p==="/api/health")return Response.json({ok:true,service:"buildflow",version:"0.3.0"});
  if(p==="/robots.txt")return new Response("User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: "+url.origin+"/sitemap.xml\n",{headers:{"content-type":"text/plain; charset=utf-8"}});
  if(p==="/sitemap.xml"){const urls=["/","/projects","/products","/contractors","/suppliers","/about","/contact","/request-quotation",...projects.map(x=>"/projects/"+x.slug),...products.map(x=>"/products/"+x.slug)];return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+urls.map(x=>"<url><loc>"+url.origin+x+"</loc></url>").join("")+"</urlset>",{headers:{"content-type":"application/xml; charset=utf-8"}})}
  if(p==="/admin"){if(!authorized(req))return new Response("BuildFlow Admin",{status:401,headers:{"WWW-Authenticate":'Basic realm="BuildFlow Admin"'}});return html(admin())}
