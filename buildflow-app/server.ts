@@ -121,11 +121,68 @@ async function form(req:Request){return Object.fromEntries(new URLSearchParams(a
 const html=(s:string,status=200,headers:any={})=>new Response(s,{status,headers:{"content-type":"text/html; charset=utf-8",...headers}});
 const server=Bun.serve({port,hostname:"0.0.0.0",async fetch(req){
  const url=new URL(req.url),p=url.pathname;
- if(p==="/api/health")return Response.json({ok:true,service:"buildflow",version:"0.3.0"});
+ if(p==="/api/health")return Response.json({ok:true,service:"buildflow",version:"0.4.0"});
  if(p==="/robots.txt")return new Response("User-agent: *\nAllow: /\nDisallow: /admin\nSitemap: "+url.origin+"/sitemap.xml\n",{headers:{"content-type":"text/plain; charset=utf-8"}});
  if(p==="/sitemap.xml"){const urls=["/","/projects","/products","/contractors","/suppliers","/about","/contact","/request-quotation",...projects.map(x=>"/projects/"+x.slug),...products.map(x=>"/products/"+x.slug)];return new Response('<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'+urls.map(x=>"<url><loc>"+url.origin+x+"</loc></url>").join("")+"</urlset>",{headers:{"content-type":"application/xml; charset=utf-8"}})}
- if(p==="/admin"){if(!authorized(req))return new Response("BuildFlow Admin",{status:401,headers:{"WWW-Authenticate":'Basic realm="BuildFlow Admin"'}});return html(admin())}
- if(p.startsWith("/lead/")&&req.method==="POST"){const data=await form(req);leads.push({type:p.split("/").pop(),data,created_at:new Date().toISOString()});await saveLeads();return html(layout("تم الاستلام",'<main class="section"><div class="wrap"><div class="panel"><h1>تم الاستلام بنجاح</h1><p>سيتم التواصل معك قريبًا.</p>'+btn("/","العودة للرئيسية","green")+'</div></div></main>'))}
+ if(p==="/admin/login"&&req.method==="GET"){if(adminSession(req))return new Response("",{status:303,headers:{location:"/admin"}});return html(adminLogin())}
+ if(p==="/admin/login"&&req.method==="POST"){
+   const data:any=await form(req);
+   if(String(data.email||"")!==String(adminUser)||String(data.password||"")!==String(adminSecret))return html(adminLogin("بيانات الدخول غير صحيحة."),401);
+   const token=crypto.randomUUID(),csrf=crypto.randomUUID();adminSessions.set(token,{csrf,created:Date.now()});
+   return new Response("",{status:303,headers:{location:"/admin","set-cookie":"bf_admin="+encodeURIComponent(token)+"; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=43200"}});
+ }
+ if(p==="/admin/logout"){const t=cookieValue(req,"bf_admin");if(t)adminSessions.delete(t);return new Response("",{status:303,headers:{location:"/admin/login","set-cookie":"bf_admin=; Path=/; Max-Age=0"}})}
+ if(p.startsWith("/admin")){
+   const session=adminSession(req);
+   if(!session)return new Response("",{status:303,headers:{location:"/admin/login"}});
+   if(p==="/admin"&&req.method==="GET")return html(adminHome());
+   if(p==="/admin/products"&&req.method==="GET")return html(adminProducts());
+   if(p==="/admin/product/new"&&req.method==="GET")return html(adminProductForm(null,session.csrf,true));
+   if(p==="/admin/product/edit"&&req.method==="GET")return html(adminProductForm(products.find(x=>x.slug===url.searchParams.get("slug")),session.csrf,false));
+   if(p==="/admin/categories"&&req.method==="GET")return html(adminCategories(session.csrf));
+   if((p==="/admin/projects"||p==="/admin/smart-carts")&&req.method==="GET")return html(adminProjects());
+   if(p==="/admin/project/new"&&req.method==="GET")return html(adminProjectForm(null,session.csrf,true));
+   if(p==="/admin/project/edit"&&req.method==="GET")return html(adminProjectForm(projects.find(x=>x.slug===url.searchParams.get("slug")),session.csrf,false));
+   if(p==="/admin/leads"&&req.method==="GET")return html(adminLeads(url.searchParams.get("type")||"",session.csrf));
+   if(p==="/admin/settings"&&req.method==="GET")return html(adminSettings(session.csrf));
+   if(req.method==="POST"){
+     const data:any=await form(req);
+     if(!csrfOk(req,data))return new Response("Forbidden",{status:403});
+     if(p==="/admin/product/save"){
+       const slug=String(data.slug||"").trim().toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"");
+       if(!slug||!String(data.name||"").trim())return new Response("Invalid product",{status:400});
+       const product:any={slug,name:String(data.name).trim(),cat:String(data.cat||"hand"),price:Number(data.price||0),stock:String(data.stock||"متوفر"),desc:String(data.desc||"").trim(),seo_title:String(data.seo_title||"").trim(),meta_description:String(data.meta_description||"").trim(),focus_keywords:String(data.focus_keywords||"").trim()};
+       const old=String(data.old_slug||"");
+       const idx=products.findIndex(x=>x.slug===old||x.slug===slug);
+       if(idx>=0)products[idx]=product;else products.push(product);
+       if(old&&old!==slug)for(const pr of projects)pr.items=(pr.items||[]).map((x:string)=>x===old?slug:x);
+       await saveCatalog();return new Response("",{status:303,headers:{location:"/admin/products"}});
+     }
+     if(p==="/admin/product/delete"){
+       const slug=String(data.slug||"");products=products.filter(x=>x.slug!==slug);for(const pr of projects)pr.items=(pr.items||[]).filter((x:string)=>x!==slug);await saveCatalog();return new Response("",{status:303,headers:{location:"/admin/products"}});
+     }
+     if(p==="/admin/category/save"){
+       const key=String(data.key||"").trim().toLowerCase().replace(/[^a-z0-9-]+/g,"-"),old=String(data.old_key||"").trim(),name=String(data.name||"").trim();
+       if(!key||!name)return new Response("Invalid category",{status:400});
+       if(old&&old!==key){for(const pr of products)if(pr.cat===old)pr.cat=key;delete cats[old]}cats[key]=name;await saveCatalog();return new Response("",{status:303,headers:{location:"/admin/categories"}});
+     }
+     if(p==="/admin/project/save"){
+       const slug=String(data.slug||"").trim().toLowerCase().replace(/[^a-z0-9-]+/g,"-").replace(/^-+|-+$/g,"");
+       const project:any={slug,name:String(data.name||"").trim(),desc:String(data.desc||"").trim(),items:String(data.items||"").split(",").map((x:string)=>x.trim()).filter(Boolean),seo_title:String(data.seo_title||"").trim(),meta_description:String(data.meta_description||"").trim(),focus_keywords:String(data.focus_keywords||"").trim()};
+       if(!slug||!project.name)return new Response("Invalid project",{status:400});
+       const old=String(data.old_slug||""),idx=projects.findIndex(x=>x.slug===old||x.slug===slug);if(idx>=0)projects[idx]=project;else projects.push(project);await saveCatalog();return new Response("",{status:303,headers:{location:"/admin/projects"}});
+     }
+     if(p==="/admin/project/delete"){projects=projects.filter(x=>x.slug!==String(data.slug||""));await saveCatalog();return new Response("",{status:303,headers:{location:"/admin/projects"}})}
+     if(p==="/admin/lead/status"){
+       const id=String(data.id||""),lead=leads.find(x=>String(x.id||x.created_at)===id);if(lead)lead.status=String(data.status||"New");await saveLeads();return new Response("",{status:303,headers:{location:"/admin/leads"}});
+     }
+     if(p==="/admin/settings/save"){
+       siteSettings.site_name=String(data.site_name||"BuildFlow").trim();siteSettings.default_title=String(data.default_title||"").trim();siteSettings.default_meta=String(data.default_meta||"").trim();siteSettings.default_city=String(data.default_city||"الرياض").trim();wa=String(data.whatsapp||"").replace(/\D/g,"");await saveSettings();return new Response("",{status:303,headers:{location:"/admin/settings"}});
+     }
+   }
+   return new Response("Not Found",{status:404});
+ }
+ if(p.startsWith("/lead/")&&req.method==="POST"){const data=await form(req);leads.push({id:crypto.randomUUID(),type:p.split("/").pop(),status:"New",data,created_at:new Date().toISOString()});await saveLeads();return html(layout("تم الاستلام",'<main class="section"><div class="wrap"><div class="panel"><h1>تم الاستلام بنجاح</h1><p>سيتم التواصل معك قريبًا.</p>'+btn("/","العودة للرئيسية","green")+'</div></div></main>'))}
  if(req.method!=="GET")return new Response("Not Found",{status:404});
  if(p==="/")return html(home());
  if(p==="/projects")return html(projectsPage());
