@@ -1,6 +1,6 @@
 
 const port=Number(Bun.env.PORT||3000);
-const wa=(Bun.env.WHATSAPP_NUMBER||"966500000000").replace(/\D/g,"");
+let wa=(Bun.env.WHATSAPP_NUMBER||"966500000000").replace(/\D/g,"");
 const adminUser=Bun.env.ADMIN_USER||"admin";
 const adminSecret=Bun.env.ADMIN_SECRET||"buildflow";
 const leadsFile="/data/leads.json"; let leads:any[]=[]; try{const f=Bun.file(leadsFile); if(await f.exists()) leads=await f.json();}catch{} async function saveLeads(){await Bun.write(leadsFile,JSON.stringify(leads,null,2));}
