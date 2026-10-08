@@ -1,0 +1,6 @@
+{
+  "name":"buildflow",
+  "version":"0.2.1",
+  "private":true,
+  "scripts":{"start":"bun run server.ts"}
+}
