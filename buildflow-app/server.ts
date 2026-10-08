@@ -4,8 +4,8 @@ const wa=(Bun.env.WHATSAPP_NUMBER||"966500000000").replace(/\D/g,"");
 const adminUser=Bun.env.ADMIN_USER||"admin";
 const adminSecret=Bun.env.ADMIN_SECRET||"buildflow";
 const leadsFile="/data/leads.json"; let leads:any[]=[]; try{const f=Bun.file(leadsFile); if(await f.exists()) leads=await f.json();}catch{} async function saveLeads(){await Bun.write(leadsFile,JSON.stringify(leads,null,2));}
-const cats={tile:"أدوات البلاط",paint:"أدوات الدهان",gypsum:"أدوات الجبس بورد",hand:"عدد يدوية",protect:"مستلزمات حماية وتنظيف"};
-const products=[
+let cats:any={tile:"أدوات البلاط",paint:"أدوات الدهان",gypsum:"أدوات الجبس بورد",adhesive:"لواصق ومواد مساعدة",hand:"عدد يدوية",light:"معدات خفيفة",protect:"مستلزمات حماية وتنظيف"};
+let products:any[]=[
  {slug:"tile-spacers-1mm",name:"فواصل بلاط 1 مم",cat:"tile",price:8,desc:"فواصل بلاط بلاستيكية لضبط المسافات بين البلاط أثناء التركيب."},
  {slug:"tile-spacers-2mm",name:"فواصل بلاط 2 مم",cat:"tile",price:8,desc:"فواصل بلاط مناسبة لتركيب السيراميك والبورسلان بتباعد منتظم."},
  {slug:"tile-leveling-wedge",name:"إسفين تسوية بلاط",cat:"tile",price:18,desc:"إسفين يساعد على تسوية البلاط وتقليل الفروقات أثناء التركيب."},
@@ -32,7 +32,7 @@ const products=[
  {slug:"tin-snips",name:"مقص صاج",cat:"hand",price:39,desc:"أداة لقص الصاج والمعادن الخفيفة."},
  {slug:"mixing-bucket",name:"دلو خلط",cat:"protect",price:18,desc:"دلو يستخدم لخلط المواد اللاصقة والمعجون."}
 ];
-const projects=[
+let projects:any[]=[
  {slug:"tile-installation",name:"تركيب بلاط",desc:"سلة مقترحة لأعمال تركيب البلاط والسيراميك.",items:["tile-spacers-1mm","tile-spacers-2mm","tile-leveling-wedge","manual-tile-cutter","rubber-mallet","notched-trowel","spirit-level","tile-cleaning-sponge","mixing-bucket","masking-tape"]},
  {slug:"room-painting",name:"دهان غرفة",desc:"كل ما يحتاجه فني الدهان من أدوات وتجهيز وحماية.",items:["paint-roller-9","paint-brush-3","paint-tray","masking-tape","protective-sheet","putty-knife","sandpaper","roller-extension-pole"]},
  {slug:"gypsum-board",name:"جبس بورد",desc:"أدوات التثبيت والتشطيب والقياس لأعمال الجبس بورد.",items:["drywall-screws","gypsum-joint-tape","gypsum-corner-bead","putty-knife","measuring-tape","spirit-level","screwdriver","tin-snips"]},
@@ -40,6 +40,28 @@ const projects=[
  {slug:"bathroom-maintenance",name:"صيانة حمام",desc:"مستلزمات أساسية لأعمال الصيانة والترميم الخفيف داخل الحمامات.",items:["silicone-gun","masking-tape","putty-knife","measuring-tape","screwdriver","pliers","protective-sheet"]},
  {slug:"apartment-finishing",name:"تشطيب شقة",desc:"مجموعة بداية لمراحل التشطيب والقياس والحماية وأعمال البلاط والدهان.",items:["measuring-tape","spirit-level","paint-roller-9","paint-brush-3","paint-tray","masking-tape","protective-sheet","putty-knife","sandpaper","silicone-gun","tile-spacers-1mm","tile-leveling-wedge","rubber-mallet","notched-trowel","mixing-bucket"]}
 ];
+const catalogFile="/data/catalog.json";
+const settingsFile="/data/settings.json";
+let siteSettings:any={site_name:"BuildFlow",default_title:"مواد البناء والتشطيب توصلك للموقع",default_meta:"منصة توريد ذكية لمواد وأدوات البناء والتشطيب في السعودية",default_city:"الرياض",whatsapp:wa};
+try{
+  const f=Bun.file(catalogFile);
+  if(await f.exists()){
+    const saved=await f.json();
+    if(saved&&Array.isArray(saved.products)&&saved.products.length)products=saved.products;
+    if(saved&&Array.isArray(saved.projects)&&saved.projects.length)projects=saved.projects;
+    if(saved&&saved.categories&&typeof saved.categories==="object")cats=saved.categories;
+  }
+}catch(e){console.error("catalog_load_error",String(e))}
+try{
+  const f=Bun.file(settingsFile);
+  if(await f.exists()){
+    const saved=await f.json();
+    if(saved&&typeof saved==="object")siteSettings={...siteSettings,...saved};
+    if(siteSettings.whatsapp)wa=String(siteSettings.whatsapp).replace(/\D/g,"");
+  }
+}catch(e){console.error("settings_load_error",String(e))}
+async function saveCatalog(){await Bun.write(catalogFile,JSON.stringify({products,projects,categories:cats},null,2))}
+async function saveSettings(){siteSettings.whatsapp=wa;await Bun.write(settingsFile,JSON.stringify(siteSettings,null,2))}
 const esc=(s:any)=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]||c));
 const css=`
 :root{--g:#173f35;--o:#ef7d22;--bg:#f5f8f6;--ink:#17201d;--mut:#68746f}*{box-sizing:border-box}
