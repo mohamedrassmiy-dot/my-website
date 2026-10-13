@@ -1,0 +1,28 @@
+name: SEO Build QA
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cms-v45/**'
+      - 'netlify.toml'
+      - '.github/workflows/seo-build-qa.yml'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Full Netlify publish-directory build and QA
+        run: |
+          python3 - <<'PY'
+          import tomllib, subprocess
+          with open('netlify.toml','rb') as f:
+              config=tomllib.load(f)
+          subprocess.run(config['build']['command'], shell=True, check=True)
+          PY

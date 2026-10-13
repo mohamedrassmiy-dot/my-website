@@ -1,0 +1,45 @@
+name: Rassmiy SEO Quality Gate
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'cms-v45/seo-*.mjs'
+      - 'netlify.toml'
+      - 'tests/**'
+      - '.github/workflows/seo-quality-gate.yml'
+  push:
+    branches: [seo-brand-demand-v79-20261013]
+jobs:
+  full-site-build-and-seo-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Run Netlify build and all regression tests
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import subprocess, tomllib
+          with open('netlify.toml', 'rb') as f:
+              command=tomllib.load(f)['build']['command']
+          subprocess.run(command, shell=True, check=True, executable='/bin/bash')
+          PY
+      - name: Verify expanded commercial page coverage
+        shell: bash
+        run: |
+          test -f release/ar/pages/marketing-agency-riyadh/index.html
+          test -f release/en/pages/marketing-agency-riyadh/index.html
+          test -f release/ar/pages/seo-services/index.html
+          test -f release/ar/pages/ai-search-optimization/index.html
+          test -f release/en/pages/google-ads-management-saudi/index.html
+          test -f release/seo-topics-v80.json
+          echo "SEO QUALITY GATE: PASS"
