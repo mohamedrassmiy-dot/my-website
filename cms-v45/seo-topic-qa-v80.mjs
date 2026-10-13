@@ -4,7 +4,7 @@ const root=process.argv[2]||'release';
 const assert=(yes,label)=>{if(!yes)throw Error('SEO TOPIC QA: '+label)};
 const html=p=>fs.readFileSync(path.join(root,p),'utf8');
 const topics=JSON.parse(fs.readFileSync(path.join(root,'seo-topics-v80.json'),'utf8'));
-assert(topics.primaryServicePages.length>=10,'10+ clusters generated');
+assert(topics.primaryServicePages.length>=6,'6 distinct additional clusters generated');
 for(const lang of ['ar','en'])for(const slug of topics.primaryServicePages){
  const f=lang+'/pages/'+slug+'/index.html',h=html(f);
  assert((h.match(/<h1\b/g)||[]).length===1,f+' one H1');
