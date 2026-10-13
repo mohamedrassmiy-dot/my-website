@@ -48,8 +48,9 @@ for(const lang of ['ar','en']){
  html=html.replace(/<script[^>]*type="application\/ld\+json"[^>]*>[\s\S]*?<\/script>/gi,'');
  html=html.replace(/<\/head>/i,'<link rel="alternate" hreflang="ar" href="'+base+'/ar/pages/marketing-agency-riyadh"><link rel="alternate" hreflang="en" href="'+base+'/en/pages/marketing-agency-riyadh"><link rel="alternate" hreflang="x-default" href="'+base+'/ar/pages/marketing-agency-riyadh"></head>');
  const main='<main id="main-content">'+c.main+'</main>';
- if(!/<main\b[^>]*>[\s\S]*?<\/main>/i.test(html))throw Error('Template main missing: '+c.src);
- html=html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/i,main);
+ if(/<main\b[^>]*>[\s\S]*?<\/main>/i.test(html))html=html.replace(/<main\b[^>]*>[\s\S]*?<\/main>/i,main);
+ else if(/<\/header>[\s\S]*?<footer\b/i.test(html))html=html.replace(/<\/header>[\s\S]*?(?=<footer\b)/i,'</header>'+main);
+ else throw Error('Template structure cannot host main: '+c.src);
  html=html.replace(/<meta\s+name="robots"\s+content="[^"]*"[^>]*>/i,'<meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1">');
  fs.mkdirSync(path.dirname(dest),{recursive:true});fs.writeFileSync(dest,html);
 }
