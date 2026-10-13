@@ -7,6 +7,8 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 const p=s=>path.join(root,s);
 function revise(file,title,description,h1,section){
   const filename=p(file);let html=fs.readFileSync(filename,'utf8');
+  // Early SEO steps run before visibility-v68; normalize the document landmark first.
+  if(!/<main\b/i.test(html)&&/<\/header>/i.test(html)&&/<footer\b/i.test(html))html=html.replace(/<\/header>/i,'</header><main id="main-content">').replace(/<footer\b/i,'</main><footer');
   if(!html.includes('<!-- BRAND_SEARCH_V79 -->')){
     if(!/<title>[\s\S]*?<\/title>/i.test(html)||!/<h1(?:\s[^>]*)?>[\s\S]*?<\/h1>/i.test(html))throw Error('Missing SEO heading: '+file);
     html=html.replace(/<title>[\s\S]*?<\/title>/i,'<title>'+esc(title)+'</title>');
