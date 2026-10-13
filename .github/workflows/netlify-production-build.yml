@@ -1,0 +1,35 @@
+name: Netlify Production Build Check
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'cms-v45/**'
+      - 'netlify.toml'
+      - 'package*.json'
+      - '.github/workflows/netlify-production-build.yml'
+  workflow_dispatch:
+
+jobs:
+  netlify-production-build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout site
+        uses: actions/checkout@v4
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Install application dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Emulate Netlify production build including plugins and functions
+        run: npx --yes netlify-cli@23.11.0 build --offline --context production --debug
+      - name: Verify page and Netlify function output
+        run: |
+          test -f release/index.html
+          test -f release/ar/pages/seo-services/index.html
+          test -f release/en/pages/marketing-agency-riyadh/index.html
+          test -f release/netlify/functions/app.mjs
+          echo "NETLIFY PROD BUILD CHECK PASSED"
