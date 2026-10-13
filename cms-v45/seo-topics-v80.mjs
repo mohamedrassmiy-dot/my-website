@@ -36,7 +36,7 @@ for(const lang of ['ar','en']){
 }
 for(const lang of ['ar','en']){
  const file=path.join(root,lang,'articles','index.html');let h=fs.readFileSync(file,'utf8');
- if(!h.includes('article-topic-links-v80'))h=h.replace(/<\/main>/i,'<section class="growth-section soft" id="article-topic-links-v80"><div class="container"><h2>'+(lang==='ar'?'خدمات مرتبطة بالمقالات':'Services related to these articles')+'</h2><p>'+data.map(x=>'<a href="/'+lang+'/pages/'+x.slug+'">'+esc(lang==='ar'?x.ar:x.en)+'</a>').join(' · ')+'</p></div></section></main>');
+ if(!h.includes('article-topic-links-v80'))h=h.replace(/<\/main>|<footer\b/i,endTag=>'<section class="growth-section soft" id="article-topic-links-v80"><div class="container"><h2>'+(lang==='ar'?'خدمات مرتبطة بالمقالات':'Services related to these articles')+'</h2><p>'+data.map(x=>'<a href="/'+lang+'/pages/'+x.slug+'">'+esc(lang==='ar'?x.ar:x.en)+'</a>').join(' · ')+'</p></div></section>'+endTag);
  fs.writeFileSync(file,h);
 }
 fs.writeFileSync(path.join(root,'seo-topics-v80.json'),JSON.stringify({version:'8.0',language:['ar','en'],primaryServicePages:data.map(x=>x.slug),targeting:'clusters not individual three head keywords'},null,2));
