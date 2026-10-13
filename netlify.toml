@@ -58,3 +58,4 @@
   node_bundler = "esbuild"
 
 # runtime fix v7.6 — bundle sanitize-html and transitive parser dependencies with esbuild
+# Netlify production rebuild 2026-10-13: retry after Cloudflare purge plugin disabled in Netlify UI.
