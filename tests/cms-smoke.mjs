@@ -33,6 +33,8 @@ r=await request('/admin/action',{...page,id:'1',status:'published'});ok(!r.res.h
 for(const [lang,slug]of [['ar','test-ar'],['en','test-en']]){r=await request('/'+lang+'/pages/'+slug);ok(r.res.status===200,'published '+lang);ok(r.text.includes('hreflang="'+lang+'"'),'content hreflang '+lang);ok(r.text.includes('https://www.linkedin.com/company/rassmiy-marketing/'),'company contact '+lang);ok(r.text.includes('/assets/site.js'),'mobile script '+lang);}
 r=await request('/admin/action',{...page,id:'1',status:'published',content_en:''});ok(r.res.headers.get('location').includes('error'),'incomplete bilingual publish rejected');
 r=await request('/sitemap.xml');ok(r.text.includes('/en/pages/test-en')&&!r.text.includes('/admin'),'sitemap published pages only');
+for(const entry of r.text.matchAll(/<url>([\s\S]*?)<\/url>/g)){ok((entry[1].match(/hreflang="x-default"/g)||[]).length===1,'one x-default per sitemap entry');}
+ok(r.text.includes('/en/pages/seo-consultant-riyadh/</loc>'),'sitemap static route uses served trailing slash');
 r=await request('/admin/action',{csrf,action:'content_status',type:'page',id:'1',status:'trash'});ok([302,303].includes(r.res.status),'trash page');
 r=await request('/en/pages/test-en');ok(r.res.status===404,'trash private');
 r=await request('/sitemap.xml');ok(!r.text.includes('/en/pages/test-en'),'trash removed sitemap');
