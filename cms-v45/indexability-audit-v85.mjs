@@ -35,7 +35,7 @@ const start=app.indexOf(prefix);
 const end=app.indexOf(suffix,start);
 assert.ok(start>=0 && end>start,'static sitemap entries were not inserted into the runtime');
 const entries=JSON.parse(app.slice(start+'for(const entry of '.length,end+1));
-const normalPath=p=>decodeURIComponent(p).replace(new RegExp('/+;
+const normalPath=p=>{const decoded=decodeURIComponent(p);return decoded.endsWith('/')&&decoded!=='/'?decoded.slice(0,-1):decoded;};
 const sitemapPaths=new Set(entries.map(entry=>normalPath(new URL(entry.loc).pathname)));
 for(const route of critical.filter(x=>x.includes('/pages/')||x.includes('/articles/'))){
  const expected=normalPath(toPublicPath(route));
