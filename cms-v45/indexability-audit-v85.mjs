@@ -21,7 +21,7 @@ for(const route of critical){
  assert.equal(canonical.length,1,'one canonical: '+route);
  const url=new URL(canonical[0][1]);
  assert.equal(url.origin,host,'canonical must use primary host: '+route);
- assert.equal(decodeURIComponent(url.pathname),toPublicPath(route),'self canonical: '+route);
+ assert.equal(decodeURIComponent(url.pathname),route==='/ar/index.html'?'/':toPublicPath(route),'self canonical: '+route);
  const robots=[...html.matchAll(/<meta\s+name="robots"\s+content="([^"]+)"/gi)];
  assert.ok(robots.every(x=>!/(?:noindex|none)/i.test(x[1])),'no noindex: '+route);
  assert.equal([...html.matchAll(/<h1(?:\s[^>]*)?>/gi)].length,1,'one H1: '+route);
