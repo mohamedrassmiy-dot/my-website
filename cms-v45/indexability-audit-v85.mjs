@@ -42,10 +42,3 @@ for(const route of critical.filter(x=>x.includes('/pages/')||x.includes('/articl
  assert.ok(sitemapPaths.has(expected),'critical page missing from sitemap generator: '+route);
 }
 console.log('Indexability gate passed: '+tested+' critical commercial pages');
-),'')||'/';
-const sitemapPaths=new Set(entries.map(entry=>normalPath(new URL(entry.loc).pathname)));
-for(const route of critical.filter(x=>x.includes('/pages/')||x.includes('/articles/'))){
- const expected=normalPath(toPublicPath(route));
- assert.ok(sitemapPaths.has(expected),'critical page missing from sitemap generator: '+route);
-}
-console.log('Indexability gate passed: '+tested+' critical commercial pages');
