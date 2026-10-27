@@ -50,6 +50,29 @@ let app=fs.readFileSync(appPath,'utf8');
 const from=base+'/en/index.html',to=base+'/en/';
 assert.ok(app.includes(from),'Expected sitemap URL for English homepage was not found');
 app=app.replaceAll(from,to);
+// Normalize every sitemap entry (including CMS-injected entries) before the XML
+// renderer, and deduplicate entries whose canonical destination is the same.
+const originalAdd="const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>items.push({loc:normalizeStaticUrlV82(loc),lastmod,priority,changefreq,alts:alts.map(a=>({...a,href:normalizeStaticUrlV82(a.href)}))});";
+assert.ok(app.includes(originalAdd),'Expected sitemap add() source missing: stop instead of risking output');
+const fixedAdd=String.raw`const add=(loc,lastmod='',priority='0.7',changefreq='monthly',alts=[])=>{
+ const normalized=canonicalSitemapUrlV87(normalizeStaticUrlV82(loc));
+ const cleanedAlts=alts.map(a=>({...a,href:canonicalSitemapUrlV87(normalizeStaticUrlV82(a.href))}));
+ const existing=items.find(x=>x.loc===normalized);
+ if(existing){if(cleanedAlts.length>(existing.alts||[]).length)existing.alts=cleanedAlts;return;}
+ items.push({loc:normalized,lastmod,priority,changefreq,alts:cleanedAlts});
+};`;
+app=app.replace(originalAdd,fixedAdd);
+app+=String.raw`
+function canonicalSitemapUrlV87(value){
+ try{
+  const url=new URL(value);
+  if(url.origin!=='https://rassmiy-marketing.netlify.app')return value;
+  if(url.pathname==='/en/index.html')url.pathname='/en/';
+  if(url.pathname==='/ar/index.html'||url.pathname==='/ar/'||url.pathname==='/index.html')url.pathname='/';
+  return url.href;
+ }catch{return value;}
+}
+`;
 fs.writeFileSync(appPath,app);
 
 function canonical(file){
