@@ -19,6 +19,15 @@ const locs=[...sitemap.body.matchAll(/<loc>\s*([^<\s]+)\s*<\/loc>/gi)].map(m=>m[
 const counts=new Map();for(const u of locs)counts.set(normalized(u),(counts.get(normalized(u))||0)+1);
 const duplicate=[...counts].filter(x=>x[1]>1);
 console.log('SITEMAP_URL_COUNTS',JSON.stringify({total:locs.length,unique:counts.size,duplicates:duplicate.slice(0,35)}));
+// Google lists duplicate but canonicalized aliases separately until it recrawls them.
+const htmlTargets=locs.filter(u=>new URL(u).pathname.match(/^\/(?:ar|en)\/[^/]+\.html$/));
+console.log('SITEMAP_TOP_LEVEL_HTML',JSON.stringify(htmlTargets));
+const aliases=await Promise.all(htmlTargets.map(async target=>{
+  const alias=new URL(target).pathname.slice(0,-5);
+  const r=await get(alias);
+  return {alias,status:r.status,final:r.url,canonical:canon(r.body)[0]||'',sameHtml:r.status===200&&normalized(canon(r.body)[0]||r.url)===normalized(target)};
+}));
+for(const item of aliases)console.log('HTML_ALIAS',JSON.stringify(item));
 const targets=[
 '/','/ar/','/ar/services','/ar/services.html','/ar/pages/marketing-agency-riyadh/',
 '/ar/pages/استشاري-تسويق-رقمي-الرياض/','/ar/pages/google-ads-management-saudi/',
