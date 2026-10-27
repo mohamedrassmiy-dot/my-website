@@ -456,14 +456,5 @@ for(const page of pages){
  // The block is supporting content. Do not overwrite the primary title or change existing slugs.
  fs.writeFileSync(file,html);count++;
 }
-fs.appendFileSync(path.join(root,'assets/styles.css'),String.raw
-/* Commercial-intent sections: readable bilingual decision content. */
-.commercial-intro-v88{max-width:72ch;line-height:1.9;margin-block:1rem 1.5rem;font-size:clamp(1rem,1.3vw,1.15rem)}
-#commercial-intent-v88{content-visibility:auto;contain-intrinsic-size:auto 900px}
-#commercial-intent-v88 details{border-block-end:1px solid #dedede;padding:.8rem 0}
-#commercial-intent-v88 summary{cursor:pointer;font-weight:650;line-height:1.7}
-#commercial-intent-v88 nav a{line-height:1.9;text-decoration:underline}
-#commercial-intent-v88 li{margin-block:.4rem}
-
-);
+fs.appendFileSync(path.join(root,'assets/styles.css'),"\n/* Commercial-intent sections: readable bilingual decision content. */\n.commercial-intro-v88{max-width:72ch;line-height:1.9;margin-block:1rem 1.5rem;font-size:clamp(1rem,1.3vw,1.15rem)}\n#commercial-intent-v88 details{border-block-end:1px solid #dedede;padding:.8rem 0}\n#commercial-intent-v88 summary{cursor:pointer;font-weight:650;line-height:1.7}\n#commercial-intent-v88 nav a{line-height:1.9;text-decoration:underline}\n#commercial-intent-v88 li{margin-block:.4rem}\n");
 console.log('COMMERCIAL_INTENT_V88=PASS: '+count+' bilingual commercial pages enhanced');
