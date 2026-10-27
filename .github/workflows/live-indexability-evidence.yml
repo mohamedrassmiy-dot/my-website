@@ -1,0 +1,22 @@
+name: Live Google Indexability Evidence
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'tests/live-indexability-evidence.mjs'
+      - '.github/workflows/live-indexability-evidence.yml'
+      - 'cms-v45/**'
+      - 'netlify.toml'
+  workflow_dispatch:
+jobs:
+  public-crawl-audit:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Read production robots sitemap and inspect priority SEO routes
+        run: node tests/live-indexability-evidence.mjs
