@@ -451,6 +451,11 @@ for(const page of pages){
  const canonicalUrl=canonical[0][1];
  const breadcrumbs=[{name:lang==='ar'?'الرئيسية':'Home',item:lang==='ar'?base+'/':base+'/en/'},{name:labels.hub,item:base+pfx.hub}];
  if(page.kind!=='hub')breadcrumbs.push({name:page.name,item:canonicalUrl});
+ // Some service pages already supply standalone Service JSON-LD. Replace, never duplicate.
+ html=html.replace(/<script\s+type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi,(whole,payload)=>{
+  try{const existing=JSON.parse(payload);return existing['@type']==='Service'?'':whole;}
+  catch{return whole;}
+ });
  const schema=[
   {'@context':'https://schema.org','@type':'Service','@id':canonicalUrl+'#service',name:page.name,serviceType:page.name,description:page.lead,url:canonicalUrl,inLanguage:lang,provider:{'@id':base+'/#organization'},areaServed:[{'@type':'Country',name:'Saudi Arabia'},{'@type':'City',name:'Riyadh'}]},
   {'@context':'https://schema.org','@type':'BreadcrumbList',itemListElement:breadcrumbs.map((b,i)=>({'@type':'ListItem',position:i+1,name:b.name,item:b.item}))},
