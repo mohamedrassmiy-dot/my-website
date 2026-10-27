@@ -28,6 +28,13 @@ const aliases=await Promise.all(htmlTargets.map(async target=>{
   return {alias,status:r.status,final:r.url,canonical:canon(r.body)[0]||'',sameHtml:r.status===200&&normalized(canon(r.body)[0]||r.url)===normalized(target)};
 }));
 for(const item of aliases)console.log('HTML_ALIAS',JSON.stringify(item));
+const specials=['/','/index.html','/ar/','/ar/index.html','/en/','/en/index.html','/en/index','/ar/services','/ar/services.html','/en/about','/en/about.html'];
+for(const path of specials){
+ try{
+   const res=await fetch(new URL(path,origin),{redirect:'manual',signal:AbortSignal.timeout(10000)});
+   console.log('RAW_ROUTE',JSON.stringify({path,status:res.status,location:res.headers.get('location'),contentType:res.headers.get('content-type')}));
+ }catch(e){console.log('RAW_ROUTE',JSON.stringify({path,error:String(e.message||e)}));}
+}
 const targets=[
 '/','/ar/','/ar/services','/ar/services.html','/ar/pages/marketing-agency-riyadh/',
 '/ar/pages/استشاري-تسويق-رقمي-الرياض/','/ar/pages/google-ads-management-saudi/',
