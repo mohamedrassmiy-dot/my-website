@@ -442,7 +442,11 @@ for(const page of pages){
   :'<p>These are scope and decision frameworks, not guaranteed outcomes, invented certifications or client results. Review the <a href="/en/about.html">professional background</a> and <a href="/en/portfolio.html">published work</a> before engaging.</p>';
  const cta='<p><a class="btn" href="'+pfx.contact+'">'+(lang==='ar'?'اطلب مراجعة لاحتياج شركتك':'Request a marketing review')+'</a></p>';
  const block=marker+'<section class="section" id="commercial-intent-v88"><div class="container"><article class="prose">'+parts+'<section><h2>'+(lang==='ar'?'أسئلة تساعدك قبل البدء':'Questions to resolve before starting')+'</h2>'+faqs+'</section>'+navigation+trust+cta+'</article></div></section>';
- assert.ok(html.includes('</main>'),'No main landmark: '+page.file);
+ if(!html.includes('</main>') && /<\/header>/i.test(html) && /<footer\b/i.test(html)) {
+  // Some legacy consultant templates are built without a main landmark.
+  html=html.replace(/<\/header>/i,'</header><main id="main-content">').replace(/<footer\b/i,'</main><footer');
+ }
+ assert.ok(html.includes('</main>'),'No main landmark or usable header/footer: '+page.file);
  html=html.replace('</main>',block+'</main>');
  const canonicalUrl=canonical[0][1];
  const breadcrumbs=[{name:lang==='ar'?'الرئيسية':'Home',item:lang==='ar'?base+'/':base+'/en/'},{name:labels.hub,item:base+pfx.hub}];
