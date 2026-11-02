@@ -56,7 +56,23 @@
       }
     }
   }catch(_){}
-  form.addEventListener('submit',function(){
+  // A contact request must contain at least one way to reply.
+  const email=form.querySelector('input[name="email"]');
+  const phone=form.querySelector('input[name="phone"]');
+  const feedback=document.getElementById('rassmiy-contact-error');
+  form.addEventListener('submit',function(event){
+    const replyEmail=email&&email.value?email.value.trim():'';
+    const replyPhone=phone&&phone.value?phone.value.trim():'';
+    if(!replyEmail&&!replyPhone){
+      event.preventDefault();
+      if(feedback){
+        feedback.hidden=false;
+        feedback.textContent=ar?'يرجى إدخال البريد الإلكتروني أو رقم الهاتف حتى أتمكن من الرد على طلبك.':'Please enter an email address or phone number so I can respond to your enquiry.';
+      }
+      if(email&&typeof email.focus==='function')email.focus();
+      return;
+    }
+    if(feedback){feedback.hidden=true;feedback.textContent='';}
     emit('rassmiy_lead_form_submit_attempt',{service_area:service||'unspecified',page_path:location.pathname});
     try{sessionStorage.setItem('rassmiy_pending_lead_v90',JSON.stringify({service:service||'unspecified',at:Date.now()}));}catch(_){}
   });
