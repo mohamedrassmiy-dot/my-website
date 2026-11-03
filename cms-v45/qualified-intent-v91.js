@@ -36,7 +36,7 @@
   const urlField=form.querySelector('input[name="page_url"]');
   const query=new URLSearchParams(location.search);
   const from=query.get('from')||'';
-  if(urlField&&from.startsWith('/')&&from.length<=160&&/^\/(ar|en)\//.test(from)&&!from.includes('?')&&!from.includes('#')){
+  if(urlField&&from.startsWith('/')&&from.length<=160&&(from==='/'||/^\/(ar|en)\//.test(from))&&!from.includes('?')&&!from.includes('#')){
     const current=urlField.value||location.pathname;
     const separator=current.includes('?')?'&':'?';
     urlField.value=(current+separator+'from='+encodeURIComponent(from)).slice(0,450);
