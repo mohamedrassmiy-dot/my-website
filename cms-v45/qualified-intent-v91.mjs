@@ -25,6 +25,11 @@ for(const c of notes){
  const f=path.join(root,c.file);
  assert.ok(fs.existsSync(f),'Commercial landing page missing: '+c.file);
  let html=fs.readFileSync(f,'utf8');
+ if(!html.includes('</main>')){
+   assert.ok(html.includes('class="page-hero"')&&html.includes('<footer'),'Missing expected legacy structure: '+c.file);
+   html=html.replace('<section class="page-hero">','<main id="main-content"><section class="page-hero">');
+   html=html.replace('<footer','</main><footer');
+ }
  assert.match(html,/<main\b[^>]*>[\s\S]*?<\/main>/i,c.file+' main missing');
  assert.ok(!html.includes(mark),c.file+' duplicate content marker');
  const li=c.points.map(p=>'<li><strong>'+p[0]+'</strong><p>'+p[1]+'</p></li>').join('');
