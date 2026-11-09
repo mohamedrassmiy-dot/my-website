@@ -33,11 +33,30 @@ for(const lang of ['ar','en']){
  ['Week three: test','Run a bounded test with a hypothesis, metric and agreed budget where paid. Output: execution log and quality observations.'],
  ['Week four: review','Review available evidence and enquiry quality to decide what to continue or change. Output: decisions and the next work plan.']];
  const block=`<section class="section" id="engagement-options"><div class="container"><article class="prose"><h2>${ar?'ما مسار التسويق المناسب لمشروعك؟':'Which marketing engagement fits your business?'}</h2>${table}<p>${ar?'هذه خيارات لتحديد النطاق وليست باقات بأسعار ثابتة. تُعتمد التسليمات والمدة والتكلفة بعد مراجعة المشروع.':'These are scope options, not fixed-price packages. Deliverables, timing and fees are agreed after reviewing the project.'}</p><p><a class="btn" href="/${lang}/contact.html">${ar?'اطلب نطاق عمل لمشروعك':'Request a scope for your project'}</a> <a href="/${lang}/pages/${consult}/">${ar?'ابدأ باستشارة تسويقية':'Start with marketing consulting'}</a></p><h2>${ar?'كيف تختلف الأولويات حسب نشاطك؟':'How do priorities change by business model?'}</h2><div class="growth-grid">${segments.map(([title,desc,slug,label])=>`<section class="growth-card"><h3>${title}</h3><p>${desc}</p><a href="/${lang}/pages/${slug}/">${label}</a></section>`).join('')}</div><h2>${ar?'نموذج بداية لمدة 30 يومًا':'An illustrative 30-day starting plan'}</h2><p>${ar?'هذا نموذج تنظيمي يُعدّل حسب النطاق والصلاحيات والموافقات، وليس تعهدًا بنتائج أو ترتيب خلال شهر.':'This planning example is adapted to scope, access and approvals. It is not a promise of rankings or business results within a month.'}</p><ol>${stages.map(([title,desc])=>`<li><h3>${title}</h3><p>${desc}</p></li>`).join('')}</ol><h2>${ar?'ماذا ترسل لطلب عرض مناسب؟':'What should you include in an enquiry?'}</h2><p>${ar?'رابط الموقع، وصف نشاطك، العميل المستهدف، مناطق الخدمة، المشكلة الأهم، والقنوات الحالية. اذكر هل تحتاج استشارة أم تنفيذًا والميزانية المتاحة إن رغبت. لا تحتاج مشاركة بيانات عملائك أو كلمات مرورك لبدء النقاش.':'Include your website, business description, target buyer, served regions, main challenge and current channels. State whether you need advice or execution and an indicative budget if you wish. Customer records and passwords are not needed for the initial discussion.'}</p><p><a class="btn" href="/${lang}/contact.html">${ar?'ناقش نطاق العمل':'Discuss the scope'}</a> · <a href="/${lang}/portfolio.html">${ar?'راجع الأعمال المنشورة':'Review published work'}</a></p></article></div></section>`;
+ const agency = ar ? {
+ title:'ماذا تستلم من وكالة التسويق قبل إطلاق حملة؟',
+ intro:'إذا كنت تقارن بين عرضين في الرياض، اطلب من كل جهة أن تشرح كيف ستدير طلبًا واحدًا من ظهور الإعلان إلى رد المبيعات. هذه عينة توضح ما ينبغي أن يذكره العرض.',
+ rows:[
+ ['المطلوب','مثال: مورّد يريد طلبات تسعير من المقاولين في الرياض. يحدد العرض من يبحث عن المنتج، وأي مناطق يخدمها المورّد، ومن يرد على الطلب.'],
+ ['التسليم','صفحة تشرح المنتج ونطاق التوريد، وإعلان يقود إليها، ونموذج يطلب نوع المادة والكمية والمدينة. يُذكر في العرض من يكتب الصفحة ومن يعتمدها.'],
+ ['قرار الاستمرار','إذا وصلت استفسارات كثيرة من خارج نطاق التوريد، نراجع الاستهداف ووصف الخدمة. وإذا وصلت طلبات مناسبة دون عروض أسعار، نراجع وقت الرد مع المبيعات قبل زيادة الإنفاق.']],
+ proof:'شاهد مثالًا من أعمال التجارة الإلكترونية', next:'قارن خدمات التسويق ونطاق كل خدمة', ask:'اطلب عرضًا يوضح التسليم والمسؤوليات'
+ } : {
+ title:'What should a marketing agency deliver before launch?',
+ intro:'When comparing two proposals in Riyadh, ask each provider to walk through one enquiry from the first ad to the sales response. This illustrative supplier brief shows what to look for.',
+ rows:[
+ ['The brief','A supplier wants quotation requests from contractors in Riyadh. Define the buyer, the delivery area and the person who will respond.'],
+ ['The deliverables','A page explains the product and delivery coverage. The ad links to that page; the enquiry form asks for the material, quantity and city. The proposal names the writer and approver.'],
+ ['The decision','Enquiries from outside the delivery area suggest a targeting or wording problem. If suitable enquiries never receive a quotation, review sales response times before increasing ad spend.']],
+ proof:'See an e-commerce project', next:'Compare marketing services and deliverables', ask:'Request a proposal with clear responsibilities'
+ };
+ const agencyBlock='<section class="section" id="engagement-options"><div class="container"><article class="prose"><h2>'+agency.title+'</h2><p>'+agency.intro+'</p>'+agency.rows.map(([h,p])=>'<h3>'+h+'</h3><p>'+p+'</p>').join('')+'<p><a href="/'+lang+'/portfolio.html#ecommerce">'+agency.proof+'</a> · <a href="/'+lang+'/services.html#engagement-options">'+agency.next+'</a></p><a class="btn" href="/'+lang+'/contact.html?service=marketing-agency">'+agency.ask+'</a></article></div></section>';
  for(const rel of ['services.html','pages/marketing-agency-riyadh/index.html']){
   const p=path.join(root,lang,rel);let h=fs.readFileSync(p,'utf8');
   // Keep the existing narrative and make concrete engagement options reachable near the top.
-  h=h.replace('</main>',block+'</main>');
-  h=h.replace('</h1>',`</h1><p><a href="#engagement-options">${ar?'قارن مسارات الخدمة ومخرجاتها':'Compare engagement options and deliverables'}</a></p>`);
+  const isAgency=rel!=='services.html';
+  h=h.replace('</main>',(isAgency?agencyBlock:block)+'</main>');
+  h=h.replace('</h1>',`</h1><p><a href="#engagement-options">${isAgency?(ar?'شاهد مثالًا على عرض وكالة تسويق':'See a sample agency brief'):(ar?'قارن مسارات الخدمة ومخرجاتها':'Compare engagement options and deliverables')}</a></p>`);
   h=h.replace('</head>','<style>.scope-table{overflow-x:auto;margin:1.5rem 0}.scope-table table{border-collapse:collapse;width:100%;min-width:640px}.scope-table caption{text-align:start;font-weight:700;padding:.7rem}.scope-table th,.scope-table td{border:1px solid #8886;padding:1rem;text-align:start;vertical-align:top}.scope-table th{font-weight:700}.scope-table:focus{outline:2px solid currentColor}#engagement-options{scroll-margin-top:6rem}</style></head>');
   fs.writeFileSync(p,h);
  }
