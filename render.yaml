@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: gladio-egypt-mirror
+    runtime: node
+    plan: free
+    region: frankfurt
+    repo: https://github.com/mohamedrassmiy-dot/my-website
+    branch: deploy/gladio-egypt-render
+    buildCommand: npm run build
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: gladio-egypt-cms-free
+          property: connectionString
+      - key: GLADIO_BOOTSTRAP_CODE
+        generateValue: true
+
+databases:
+  - name: gladio-egypt-cms-free
+    plan: free
+    region: frankfurt

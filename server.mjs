@@ -1,3 +1,4 @@
+import { handleCms } from './cms.mjs';
 import http from 'node:http';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -61,6 +62,7 @@ const server = http.createServer(async (req, res) => {
   try { url = new URL(req.url || '/', 'https://gladio-mirror.local'); } catch {
     return sendJson(res, 400, { error: 'Invalid URL' });
   }
+  if (await handleCms(req, res, url)) return;
   if (url.pathname === '/healthz' || url.pathname === '/api/health') {
     return sendJson(res, 200, { status: 'ok', service: 'gladio-render-mirror', publicPages: entries.length });
   }
@@ -77,19 +79,12 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(302, { location: '/ar/', 'x-robots-tag': 'noindex' });
     return res.end();
   }
-  if (url.pathname === '/admin' || url.pathname.startsWith('/admin/')) {
-    res.writeHead(302, {
-      location: PRIMARY + url.pathname + url.search,
-      'cache-control': 'no-store',
-      'x-robots-tag': 'noindex,nofollow',
-    });
+  if (url.pathname === '/admin') {
+    res.writeHead(308, {location:'/admin/', 'x-robots-tag':'noindex,nofollow'});
     return res.end();
   }
   if (url.pathname.startsWith('/api/')) {
-    return sendJson(res, 403, {
-      error: 'Private administration APIs are available only on the primary site.',
-      primary: PRIMARY + '/admin/',
-    });
+    return sendJson(res, 404, {error:'Unknown API route'});
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     return sendJson(res, 405, { error: 'Method not allowed' });

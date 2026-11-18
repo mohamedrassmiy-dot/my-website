@@ -9,6 +9,10 @@
   "scripts": {
     "build": "node scripts/snapshot.mjs",
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check scripts/snapshot.mjs"
+    "check": "node --check server.mjs && node --check cms.mjs && node --check scripts/snapshot.mjs",
+    "prebuild": "npm install --omit=dev"
+  },
+  "dependencies": {
+    "pg": "8.13.1"
   }
 }

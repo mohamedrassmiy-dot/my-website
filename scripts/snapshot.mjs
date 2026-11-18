@@ -131,6 +131,29 @@ await runInParallel([...routes], async (route) => {
   await writeSafe(route + 'index.html', Buffer.from(html));
 });
 
+
+const adminFiles = ['/admin/','/admin/app.js','/admin/google-verification-check.js','/admin/seo-helper.js'];
+await runInParallel(adminFiles, async (route) => {
+  let source = (await fetchChecked(ORIGIN + route)).toString('utf8');
+  if (route === '/admin/') {
+    if (!source.includes('id="loginForm"') || !source.includes('</html>')) throw new Error('Admin UI incomplete');
+    source = source.replace('المحتوى التاريخي الثابت محفوظ في Vercel.', 'المحتوى التاريخي الثابت متاح في Render بعد كل عملية بناء.');
+    source = source.replace('</head>', '<meta name="robots" content="noindex,nofollow"></head>');
+    const backupPanel = '<section id="backupPanel"><h2>نسخ احتياطي ونقل المحتوى</h2><p>يمكن تصدير مواد الإدارة وإعداداتها أو استيراد ملف JSON من لوحة Vercel بعد تسجيل الدخول.</p><p><a href="/api/admin/export" download="gladio-render-backup.json">تنزيل نسخة JSON من Render</a></p><input type="file" id="importCmsJson" accept=".json,application/json"><button type="button" id="importCmsNow">استيراد مواد JSON</button></section>';
+    source = source.replace('</main>', backupPanel + '</main>');
+    await writeSafe('/admin/index.html', Buffer.from(source));
+    return;
+  }
+  if (route === '/admin/app.js') {
+    if (!source.includes('/api/admin/login') || !source.includes('/api/admin/item')) throw new Error('Admin app incomplete');
+    source = source.replace('إعدادات Vercel', 'إعدادات Render');
+    source = source.replace('begin()})();', String.raw`const imp=document.getElementById('importCmsNow');if(imp)imp.addEventListener('click',async()=>{try{const f=document.getElementById('importCmsJson').files?.[0];if(!f)throw Error('اختر ملف JSON أولًا');const body=JSON.parse(await f.text());const result=await req('/api/admin/import','POST',body);message('تم استيراد '+result.imported+' مادة، وتخطي '+result.skipped+' مادة');await sync()}catch(e){message(e.message)}});begin()})();`);
+    await writeSafe(route, Buffer.from(source));
+    return;
+  }
+  await writeSafe(route, Buffer.from(source));
+});
+
 const assetFailures = [];
 await runInParallel([...assets], async (asset) => {
   try {
