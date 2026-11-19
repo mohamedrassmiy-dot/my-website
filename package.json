@@ -1,5 +1,5 @@
 {
-  "name": "gladio-egypt-netlify-mirror",
+  "name": "gladio-egypt-cloudflare-pages-mirror",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -7,8 +7,8 @@
     "node": ">=22"
   },
   "scripts": {
-    "build": "node scripts/snapshot.mjs && node scripts/generate-netlify-data.mjs",
-    "check": "node --check scripts/snapshot.mjs && node --check scripts/generate-netlify-data.mjs && node --check netlify/functions/search.mjs && node --check netlify/functions/health.mjs"
+    "build": "node scripts/snapshot.mjs && node scripts/cloudflare-finalize.mjs",
+    "check": "node --check scripts/snapshot.mjs && node --check scripts/cloudflare-finalize.mjs && node --check functions/api/search.js && node --check functions/api/health.js && node --check functions/api/entries.js && node --check functions/api/mirror-status.js && node --check functions/healthz.js"
   },
   "dependencies": {}
 }
