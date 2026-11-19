@@ -1,0 +1,5 @@
+.netlify/
+node_modules/
+dist/
+netlify/functions/generated-search.mjs
+netlify/functions/generated-manifest.mjs
