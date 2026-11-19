@@ -1,21 +1,22 @@
-# غلاديو مصر على Render — نسخة مستقلة وظيفيًا
+# Gladio Egypt — Netlify free mirror
 
-This deployment mirrors the 216 canonical pages and public resources of the Vercel site (218 public localized routes), and runs its **own admin CMS backend** and **own Render Postgres database**.
+This is a **separate Git branch** for Netlify. It does not replace the `main` branch or the Render deployment.
 
-- Fully functional CMS routes: /api/admin/status, setup, login, me, logout, content, item (POST/PUT/DELETE), settings (GET/PUT), change-password, verification upload, export, import.
-- Public published content: /api/content, /api/post, /ar/posts/:slug, /en/posts/:slug, plus /api/search and /api/health.
-- Admin UI: /admin/ (the same original public admin HTML and JavaScript copied from Vercel).
-- Passwords hashed using scrypt; sessions use HttpOnly Secure SameSite=Strict cookies and hashed database tokens.
-- Source material and public archives are copied at **build time**, not continuously.
-- Private data and original Vercel admin passwords, sessions, drafts, and Blob storage are **not migrated automatically** and are **not shared**; use authenticated export/import for private CMS records.
-- Canonical/robots remains directed to the Vercel site; Render's copy remains noindex to protect SEO.
+## One-click deployment
 
-## Before opening admin
+[Deploy to Netlify](https://app.netlify.com/start/deploy?repository=https%3A%2F%2Fgithub.com%2Fmohamedrassmiy-dot%2Fmy-website&branch=deploy%2Fgladio-egypt-netlify)
 
-Link a private Render Postgres connection string through `DATABASE_URL`. Configure a cryptographically random one-time `GLADIO_BOOTSTRAP_CODE` in Render secrets, then open /admin/ and set up your **new Render administrator**. Admin setup is disabled permanently as soon as one administrator exists.
+Select the **Ali / mohamed-rassmiy** Netlify team and its Free plan if prompted.
 
-## Free tier retention warning
+## How it works
 
-Render Free Postgres expires **30 days after creation** and cannot be used as durable production storage; no automatic backups are provided. **Export data before expiration, upgrade the datastore, or migrate to a durable external database.** No paid plan was enabled here.
+- The build fetches the current `https://gladio-egypt.vercel.app/sitemap.xml`, all Arabic and English public HTML pages, styles, scripts and public sources, and creates a static snapshot in `dist/`.
+- Netlify Functions provide a read-only search API at `/api/search`, `/api/entries`, and health/status at `/api/health`, `/healthz` and `/api/mirror-status`.
+- All HTML retains canonical references to Vercel and contains `noindex,follow` to prevent duplicated search results. Netlify also sets `X-Robots-Tag: noindex`.
+- Visiting `/admin/` redirects to the original secure administrative system at Vercel. This branch does **not** duplicate credentials, session cookies, Postgres, CMS write access, or sensitive private data.
+- Public data is refreshed when Netlify rebuilds from the Git branch, not continuously. The site remains useful as a public snapshot if Vercel later goes offline.
+- Build checks that the source sitemap is a reasonable size and that both languages have public pages.
 
-This isolated Git branch is not the `main` branch of the enclosing GitHub repository.
+**Deployment status:** Prepared, requires an authorized Netlify Git import. A working published URL must only be claimed after Netlify reports a successful production deploy and HTTP checks pass.
+
+**Note:** The public historical material may contain contested claims. Publishing a copy does not turn such claims into independently verified facts.
