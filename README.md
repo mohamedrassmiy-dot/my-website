@@ -1,22 +1,27 @@
-# Gladio Egypt — Netlify free mirror
+# Gladio Egypt — Cloudflare Pages / Free public mirror
 
-This is a **separate Git branch** for Netlify. It does not replace the `main` branch or the Render deployment.
+This isolated branch is prepared for **Cloudflare Pages** and does not modify the main GitHub branch or the production site on Vercel.
 
-## One-click deployment
+## Connect and deploy
 
-[Deploy to Netlify](https://app.netlify.com/start/deploy?repository=https%3A%2F%2Fgithub.com%2Fmohamedrassmiy-dot%2Fmy-website&branch=deploy%2Fgladio-egypt-netlify)
+1. Visit https://dash.cloudflare.com/ and open **Workers & Pages**.
+2. Create application → **Pages** → **Import an existing Git repository**.
+3. Authorize **GitHub** and select `mohamedrassmiy-dot/my-website`.
+4. Set **Production branch** to `deploy/gladio-egypt-cloudflare` (do **not** use `main`).
+5. Choose **Framework preset**: None, **Build command**: `npm run build`, **Build output directory**: `dist`, **Root directory**: repository root.
+6. Deploy on the free Pages plan and verify `/ar/`, `/en/`, `/ar/legacy-blog/`, `/api/health`, and `/api/search?q=gladio`.
 
-Select the **Ali / mohamed-rassmiy** Netlify team and its Free plan if prompted.
+The build copies current public HTML and assets from `https://gladio-egypt.vercel.app`. Around 216 canonical pages + two search views are mirrored, with original documents preserved; the exact count is verified at build time.
 
-## How it works
+## Safety and SEO
 
-- The build fetches the current `https://gladio-egypt.vercel.app/sitemap.xml`, all Arabic and English public HTML pages, styles, scripts and public sources, and creates a static snapshot in `dist/`.
-- Netlify Functions provide a read-only search API at `/api/search`, `/api/entries`, and health/status at `/api/health`, `/healthz` and `/api/mirror-status`.
-- All HTML retains canonical references to Vercel and contains `noindex,follow` to prevent duplicated search results. Netlify also sets `X-Robots-Tag: noindex`.
-- Visiting `/admin/` redirects to the original secure administrative system at Vercel. This branch does **not** duplicate credentials, session cookies, Postgres, CMS write access, or sensitive private data.
-- Public data is refreshed when Netlify rebuilds from the Git branch, not continuously. The site remains useful as a public snapshot if Vercel later goes offline.
-- Build checks that the source sitemap is a reasonable size and that both languages have public pages.
+- Public mirror HTML includes `noindex,follow` and canonical pointers to the Vercel URLs.
+- Cloudflare `_headers` adds `X-Robots-Tag: noindex, follow`; `_routes.json` limits Functions to `/api/*` and `/healthz`.
+- Pages Functions expose read-only `/api/search`, `/api/entries`, `/api/health`, `/api/mirror-status`, and `/healthz`.
+- `/admin/` redirects to the Vercel CMS. This branch does not copy admin passwords, sessions, secret environment variables, database data, or writing privileges.
+- Builds refresh snapshots when the branch is deployed; they are **not live replication**.
+- A published Cloudflare URL must be checked after a successful deployment; this branch alone does not establish a live Cloudflare site.
 
-**Deployment status:** Prepared, requires an authorized Netlify Git import. A working published URL must only be claimed after Netlify reports a successful production deploy and HTTP checks pass.
+## Scope
 
-**Note:** The public historical material may contain contested claims. Publishing a copy does not turn such claims into independently verified facts.
+Full bilingual **public website** + read-only backend endpoints, **not** an independent administrative backend or database. This is intentional to avoid exposing unapproved private data.
