@@ -1,27 +1,38 @@
-# Gladio Egypt — Cloudflare Pages / Free public mirror
+# Gladio Egypt — Cloudflare Workers + Static Assets mirror
 
-This isolated branch is prepared for **Cloudflare Pages** and does not modify the main GitHub branch or the production site on Vercel.
+**Canonical primary:** https://gladio-egypt.vercel.app/
 
-## Connect and deploy
+Cloudflare project in the user's screenshot: **my-website** (a Worker, not a Pages project). Its Git deployment initially failed because `npx wrangler deploy` did not find a directory containing static assets. This branch fixes that with `wrangler.jsonc` + `src/worker.js` and builds `dist/` from public source pages.
 
-1. Visit https://dash.cloudflare.com/ and open **Workers & Pages**.
-2. Create application → **Pages** → **Import an existing Git repository**.
-3. Authorize **GitHub** and select `mohamedrassmiy-dot/my-website`.
-4. Set **Production branch** to `deploy/gladio-egypt-cloudflare` (do **not** use `main`).
-5. Choose **Framework preset**: None, **Build command**: `npm run build`, **Build output directory**: `dist`, **Root directory**: repository root.
-6. Deploy on the free Pages plan and verify `/ar/`, `/en/`, `/ar/legacy-blog/`, `/api/health`, and `/api/search?q=gladio`.
+## Fix existing failed Cloudflare project
 
-The build copies current public HTML and assets from `https://gladio-egypt.vercel.app`. Around 216 canonical pages + two search views are mirrored, with original documents preserved; the exact count is verified at build time.
+Open **Cloudflare → Workers & Pages → my-website → Settings → Builds**.
 
-## Safety and SEO
+- Repository: `mohamedrassmiy-dot/my-website`
+- **Production Git branch:** `deploy/gladio-egypt-cloudflare` — not `main`.
+- Root directory: repository root.
+- **Deploy command:** `npm run deploy` (builds the snapshot, checks its output, then calls the pinned Wrangler).
+- Build command: leave empty if using `npm run deploy`, to avoid building the same snapshot twice.
+- Worker name: `my-website`, matching `wrangler.jsonc`.
 
-- Public mirror HTML includes `noindex,follow` and canonical pointers to the Vercel URLs.
-- Cloudflare `_headers` adds `X-Robots-Tag: noindex, follow`; `_routes.json` limits Functions to `/api/*` and `/healthz`.
-- Pages Functions expose read-only `/api/search`, `/api/entries`, `/api/health`, `/api/mirror-status`, and `/healthz`.
-- `/admin/` redirects to the Vercel CMS. This branch does not copy admin passwords, sessions, secret environment variables, database data, or writing privileges.
-- Builds refresh snapshots when the branch is deployed; they are **not live replication**.
-- A published Cloudflare URL must be checked after a successful deployment; this branch alone does not establish a live Cloudflare site.
+Save, then select **Retry build** or push a new commit on the production branch.
 
-## Scope
+Alternatively, leave the default Deploy command `npx wrangler deploy`, but then set **Build command** to `npm run build`. The snapshot must be built before the deploy command. Cloudflare Workers Git Builds currently does not honor Wrangler's custom `build.command`, so set this in the dashboard.
 
-Full bilingual **public website** + read-only backend endpoints, **not** an independent administrative backend or database. This is intentional to avoid exposing unapproved private data.
+When live, use the Cloudflare-provided `workers.dev` URL (because this is a Worker deployment, **not** `pages.dev`).
+
+## Runtime scope
+
+- Serves all 216 canonical public AR/EN pages plus 2 search views as a **build-time static archive** (exact count checked during build).
+- Read-only APIs: `/api/health`, `/healthz`, `/api/mirror-status`, `/api/search?q=gladio`, `/api/entries`.
+- Cloudflare Worker script: `src/worker.js`; Wrangler static asset directory: `./dist`.
+- Noindex mirror and canonical references pointing to the primary Vercel URLs.
+- `/admin/` redirects to the Vercel CMS. There are no copied passwords, sessions, private database contents, or writing endpoints.
+- No permanent sync; each build snapshots the public website at build time.
+- Does not touch the GitHub `main` branch or the canonical Vercel deployment.
+
+## After deployment
+
+Check `/ar/`, `/en/`, `/api/health` and `/api/search?q=gladio` on the actual `workers.dev` domain. Confirm that public HTML is `noindex,follow` and has a canonical to the primary site.
+
+A successful deployment cannot be assumed from this Git branch alone. Confirm the build and deployment results in Cloudflare.
