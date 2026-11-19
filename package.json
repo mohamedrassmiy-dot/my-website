@@ -8,7 +8,11 @@
   },
   "scripts": {
     "build": "node scripts/snapshot.mjs && node scripts/cloudflare-finalize.mjs",
-    "check": "node --check scripts/snapshot.mjs && node --check scripts/cloudflare-finalize.mjs && node --check functions/api/search.js && node --check functions/api/health.js && node --check functions/api/entries.js && node --check functions/api/mirror-status.js && node --check functions/healthz.js"
+    "check": "node --check scripts/snapshot.mjs && node --check scripts/cloudflare-finalize.mjs && node --check functions/api/search.js && node --check functions/api/health.js && node --check functions/api/entries.js && node --check functions/api/mirror-status.js && node --check functions/healthz.js && node --check src/worker.js",
+    "deploy": "npm run build && wrangler deploy"
   },
-  "dependencies": {}
+  "dependencies": {},
+  "devDependencies": {
+    "wrangler": "4.165.0"
+  }
 }
